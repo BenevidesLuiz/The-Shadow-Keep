@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 9d9c0cedcd8be3549b1232c1f2683f0e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264868
+  packageName: 2D Soulslike Knight (Pixel Art)
+  packageVersion: 1.0.0
+  assetPath: Assets/SpellSoft Pixel/2D Soulslike Knight - Pixel Art/Scripts/SoulslikeKnight.cs
+  uploadId: 611634

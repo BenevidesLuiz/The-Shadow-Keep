@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bb12b98f47f01614b8b8d0077f0fa8bc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 264868
+  packageName: 2D Soulslike Knight (Pixel Art)
+  packageVersion: 1.0.0
+  assetPath: Assets/SpellSoft Pixel/2D Soulslike Knight - Pixel Art/Animator/SoulslikeKnight.controller
+  uploadId: 611634

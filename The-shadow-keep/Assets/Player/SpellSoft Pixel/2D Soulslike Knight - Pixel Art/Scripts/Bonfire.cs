@@ -193,25 +193,30 @@ public class Bonfire : MonoBehaviour
     //  RESPAWN DE INIMIGOS
     // ==================================================================== //
 
-    private void RespawnAllEnemies()
+    private static List<EnemySpawner> registeredSpawners = new List<EnemySpawner>();
+
+    // ── Método de registro (chamado pelo EnemySpawner.Start) ──
+    public static void RegisterSpawner(EnemySpawner spawner)
     {
-        // Destroi todos os inimigos vivos
-        Enemy[] aliveEnemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
-        foreach (Enemy e in aliveEnemies)
-            Destroy(e.gameObject);
-
-        // Reinstancia cada inimigo na posicao original
-        foreach (EnemySpawnData data in enemySpawns)
-        {
-            if (data.prefab == null) continue;
-
-            GameObject newEnemy = Instantiate(data.prefab, data.spawnPosition, Quaternion.identity);
-            Debug.Log($"[Bonfire] Inimigo {data.prefab.name} renasceu em {data.spawnPosition}");
-        }
+        if (!registeredSpawners.Contains(spawner))
+            registeredSpawners.Add(spawner);
     }
 
+    // ── Substitui RespawnAllEnemies() ──
+    private void RespawnAllEnemies()
+    {
+        // Remove spawners destruídos da lista
+        registeredSpawners.RemoveAll(s => s == null);
+
+        foreach (EnemySpawner spawner in registeredSpawners)
+            spawner.ResetSpawner();
+
+        Debug.Log($"[Bonfire] {registeredSpawners.Count} spawner(s) resetados.");
+    }
+
+
     // ==================================================================== //
-    //  REGISTRO AUTOMATICO DE INIMIGOS (opcional)
+    //  REGISTRO AUTOMATICO DE INIMIGOS
     //  Chame Enemy.RegisterSpawn() no Start() do Enemy para auto-registrar
     // ==================================================================== //
 

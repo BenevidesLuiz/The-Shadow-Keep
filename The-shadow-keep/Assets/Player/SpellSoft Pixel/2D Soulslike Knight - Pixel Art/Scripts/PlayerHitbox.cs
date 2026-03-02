@@ -34,8 +34,7 @@ public class PlayerHitbox : MonoBehaviour
         hitCollider.enabled = false;
     }
 
-    private void Update()
-    {
+    private void Update()  {
         if (!autoActivate || knight == null) return;
 
         // Detecta quando o knight entra/sai do estado de ataque via reflection

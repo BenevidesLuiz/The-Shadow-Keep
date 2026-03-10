@@ -2,9 +2,12 @@
 using UnityEngine;
 
 /// <summary>
-/// Enemy — Estilo Dark Souls.
-/// Anda pelo cenario detectando paredes/bordas → ao ver o player persegue →
-/// chega perto → windup → ataque → recua → repete.
+/// Enemy v2 — Integrado com SoulManager.
+///
+/// MUDANÇAS v2:
+///   - Inimigo dropa Almas ao morrer (SoulManager.Instance.AddSouls)
+///   - SoulDropAmount configurável no Inspector
+///   - Lógica principal inalterada
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public class Enemy : MonoBehaviour
@@ -12,52 +15,51 @@ public class Enemy : MonoBehaviour
     private enum State { Wandering, Chasing, Windup, Attacking, Recovery, Hurt, Dead }
     private State state = State.Wandering;
 
-    // ── Componentes ──────────────────────────────────────────────────────
     private Rigidbody2D rb;
     private Animator anim;
     private Transform player;
     private SoulslikeKnight playerKnight;
 
-    // ── Animacoes ────────────────────────────────────────────────────────
     private const string A_IDLE = "Idle";
     private const string A_WALK = "Walk";
     private const string A_ATTACK = "Attack";
     private const string A_HURT = "Hurt";
     private const string A_DEATH = "Death";
 
-    // ── Vida ─────────────────────────────────────────────────────────────
     [Header("Vida")]
     [SerializeField] private float maxHealth = 50f;
     [SerializeField] private float hurtStunTime = 0.35f;
     private float hp;
 
-    // ── Movimento ────────────────────────────────────────────────────────
-    [Header("Movimento")]
-    [SerializeField] private float wanderSpeed = 1.8f;  // velocidade andando pelo cenario
-    [SerializeField] private float chaseSpeed = 3.5f;  // velocidade perseguindo
-    [SerializeField] private float stopDistance = 1.1f;  // distancia para parar e atacar
+    // ── NOVO: Almas dropadas ao morrer ───────────────────────────────────
+    [Header("Drop de Almas")]
+    [SerializeField] private int soulDropAmount = 100;
+    [Tooltip("Variação aleatória: valor real = soulDropAmount ± soulDropVariance")]
+    [SerializeField] private int soulDropVariance = 20;
 
-    // ── Wander ───────────────────────────────────────────────────────────
+    [Header("Movimento")]
+    [SerializeField] private float wanderSpeed = 1.8f;
+    [SerializeField] private float chaseSpeed = 3.5f;
+    [SerializeField] private float stopDistance = 1.1f;
+
     [Header("Wander")]
-    [SerializeField] private float minWanderTime = 1.5f; // tempo minimo andando numa direcao
-    [SerializeField] private float maxWanderTime = 3.5f; // tempo maximo
-    [SerializeField] private float wallCheckDist = 0.4f; // distancia para detectar parede
-    [SerializeField] private LayerMask groundLayer;       // layer do chao (para borda)
+    [SerializeField] private float minWanderTime = 1.5f;
+    [SerializeField] private float maxWanderTime = 3.5f;
+    [SerializeField] private float wallCheckDist = 0.4f;
+    [SerializeField] private LayerMask groundLayer;
 
     [Header("Deteccao de Borda")]
-    [SerializeField] private float edgeCheckDist = 0.6f;  // distancia a frente do pe
-    [SerializeField] private Transform groundCheck;          // transform no pe do inimigo
+    [SerializeField] private float edgeCheckDist = 0.6f;
+    [SerializeField] private Transform groundCheck;
 
-    private float wanderDir = 1f;   // direcao atual: 1 = direita, -1 = esquerda
-    private float wanderTimer = 0f;   // tempo restante nessa direcao
+    private float wanderDir = 1f;
+    private float wanderTimer = 0f;
     private bool isWanderPaused = false;
 
-    // ── Deteccao ─────────────────────────────────────────────────────────
     [Header("Deteccao")]
     [SerializeField] private float aggroRange = 6f;
     [SerializeField] private float deaggroRange = 10f;
 
-    // ── Ataque ───────────────────────────────────────────────────────────
     [Header("Ataque")]
     [SerializeField] private float attackDamage = 15f;
     [SerializeField] private float windupTime = 0.2f;
@@ -66,10 +68,8 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float recoverySpeed = 2f;
     [SerializeField] private float attackRange = 1.3f;
 
-    // ── Knockback ────────────────────────────────────────────────────────
     private Vector2 pendingKnockback;
 
-    // ── Eventos ──────────────────────────────────────────────────────────
     public event System.Action<float, float> OnHealthChanged;
 
     // ====================================================================
@@ -79,10 +79,7 @@ public class Enemy : MonoBehaviour
         anim = GetComponent<Animator>();
         hp = maxHealth;
 
-        // Tenta pela Tag primeiro
         GameObject p = GameObject.FindGameObjectWithTag("Player");
-
-        // Fallback: busca pelo componente diretamente se Tag falhar
         if (p == null)
         {
             SoulslikeKnight found = FindFirstObjectByType<SoulslikeKnight>();
@@ -93,30 +90,23 @@ public class Enemy : MonoBehaviour
         {
             player = p.transform;
             playerKnight = p.GetComponent<SoulslikeKnight>();
-            Debug.Log($"[Enemy] Player encontrado: {p.name}, Tag={p.tag}, Knight={playerKnight != null}");
         }
         else
         {
-            Debug.LogError("[Enemy] PLAYER NAO ENCONTRADO por Tag nem por componente!");
+            Debug.LogError("[Enemy] PLAYER NAO ENCONTRADO!");
         }
 
-        // Comeca andando numa direcao aleatoria
         wanderDir = Random.value > 0.5f ? 1f : -1f;
         wanderTimer = Random.Range(minWanderTime, maxWanderTime);
 
-        // CRITICO: ignora colisao fisica entre inimigo e player
-        // Isso evita que o inimigo empurre o player e trave o movimento
         GameObject playerObj = player != null ? player.gameObject : GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             Collider2D[] enemyCols = GetComponents<Collider2D>();
             Collider2D[] playerCols = playerObj.GetComponents<Collider2D>();
-
             foreach (Collider2D ec in enemyCols)
                 foreach (Collider2D pc in playerCols)
                     Physics2D.IgnoreCollision(ec, pc, true);
-
-            Debug.Log("[Enemy] Colisao fisica com player DESATIVADA");
         }
     }
 
@@ -141,28 +131,18 @@ public class Enemy : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // Para completamente durante estados que nao devem mover
-        // Isso evita que o inimigo deslize e empurre o player
-        if (state == State.Dead ||
-            state == State.Hurt ||
-            state == State.Windup ||
-            state == State.Attacking ||
-            state == State.Recovery)
+        if (state == State.Dead || state == State.Hurt ||
+            state == State.Windup || state == State.Attacking || state == State.Recovery)
         {
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
         }
     }
 
     // ── WANDER ───────────────────────────────────────────────────────────
-    // Anda pelo cenario, detecta parede e borda, muda de direcao
+
     private void UpdateWander()
     {
-        // Detectou o player?
-        if (player != null && Dist() <= aggroRange)
-        {
-            state = State.Chasing;
-            return;
-        }
+        if (player != null && Dist() <= aggroRange) { state = State.Chasing; return; }
 
         if (isWanderPaused)
         {
@@ -171,14 +151,7 @@ public class Enemy : MonoBehaviour
             return;
         }
 
-        // Checa parede a frente
-        bool hitWall = Physics2D.Raycast(
-            transform.position,
-            new Vector2(wanderDir, 0f),
-            wallCheckDist,
-            groundLayer);
-
-        // Checa borda (se nao tem chao a frente)
+        bool hitWall = Physics2D.Raycast(transform.position, new Vector2(wanderDir, 0f), wallCheckDist, groundLayer);
         bool atEdge = false;
         if (groundCheck != null)
         {
@@ -186,21 +159,10 @@ public class Enemy : MonoBehaviour
             atEdge = !Physics2D.OverlapCircle(checkPos, 0.15f, groundLayer);
         }
 
-        if (hitWall || atEdge)
-        {
-            // Bate na parede ou borda: pausa e vira
-            StartCoroutine(WanderPause());
-            return;
-        }
+        if (hitWall || atEdge) { StartCoroutine(WanderPause()); return; }
 
-        // Diminui timer da direcao atual
         wanderTimer -= Time.deltaTime;
-        if (wanderTimer <= 0f)
-        {
-            // Tempo esgotou: pausa e escolhe nova direcao
-            StartCoroutine(WanderPause());
-            return;
-        }
+        if (wanderTimer <= 0f) { StartCoroutine(WanderPause()); return; }
 
         rb.linearVelocity = new Vector2(wanderDir * wanderSpeed, rb.linearVelocity.y);
         PlayAnim(A_WALK);
@@ -211,31 +173,21 @@ public class Enemy : MonoBehaviour
         isWanderPaused = true;
         rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
         PlayAnim(A_IDLE);
-
-        // Pausa breve (0.3 a 0.8s) antes de mudar de direcao
         yield return new WaitForSeconds(Random.Range(0.3f, 0.8f));
-
-        // Escolhe nova direcao e novo timer
         wanderDir = -wanderDir;
         wanderTimer = Random.Range(minWanderTime, maxWanderTime);
         isWanderPaused = false;
     }
 
     // ── CHASING ──────────────────────────────────────────────────────────
+
     private void UpdateChasing()
     {
         if (player == null) { state = State.Wandering; return; }
-
         float dist = Dist();
 
-        // Perdeu o player: volta a andar
-        if (dist > deaggroRange)
-        {
-            state = State.Wandering;
-            return;
-        }
+        if (dist > deaggroRange) { state = State.Wandering; return; }
 
-        // Chegou perto: ataca
         if (dist <= stopDistance)
         {
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
@@ -249,6 +201,7 @@ public class Enemy : MonoBehaviour
     }
 
     // ── ATAQUE ───────────────────────────────────────────────────────────
+
     private IEnumerator AttackSequence()
     {
         state = State.Windup;
@@ -261,36 +214,15 @@ public class Enemy : MonoBehaviour
         PlayAnim(A_ATTACK);
         yield return new WaitForSeconds(attackDuration * 0.5f);
 
-        float distAtHit = Dist();
-        Debug.Log($"[Enemy] HIT CHECK — Dist={distAtHit:F2} / Range={attackRange * 1.4f:F2} / State={state} / Knight={playerKnight != null}");
-
-        if (player != null && distAtHit <= attackRange * 1.4f)
+        if (player != null && Dist() <= attackRange * 1.4f)
         {
-            if (playerKnight != null)
-            {
-                playerKnight.TakeDamage(attackDamage);
-                Debug.Log($"[Enemy] DANO APLICADO: {attackDamage}");
-            }
-            else
-            {
-                // Tenta pegar o componente de novo caso tenha falhado no Start
-                playerKnight = player.GetComponent<SoulslikeKnight>();
-                if (playerKnight != null)
-                {
-                    playerKnight.TakeDamage(attackDamage);
-                    Debug.Log($"[Enemy] DANO APLICADO (retry): {attackDamage}");
-                }
-                else
-                {
-                    Debug.LogError("[Enemy] SoulslikeKnight NAO encontrado no Player!");
-                }
-            }
+            if (playerKnight == null) playerKnight = player.GetComponent<SoulslikeKnight>();
+            playerKnight?.TakeDamage(attackDamage);
         }
 
         yield return new WaitForSeconds(attackDuration * 0.5f);
         if (state != State.Attacking) yield break;
 
-        // Recua
         state = State.Recovery;
         float recoverDir = player != null ? -Mathf.Sign(player.position.x - transform.position.x) : wanderDir;
         float elapsed = 0f;
@@ -307,6 +239,7 @@ public class Enemy : MonoBehaviour
     }
 
     // ── DANO ─────────────────────────────────────────────────────────────
+
     public void TakeDamage(float amount, Vector2 knockback = default)
     {
         if (state == State.Dead) return;
@@ -314,8 +247,7 @@ public class Enemy : MonoBehaviour
         hp = Mathf.Max(0f, hp - amount);
         OnHealthChanged?.Invoke(hp, maxHealth);
 
-        if (knockback != default)
-            pendingKnockback = knockback;
+        if (knockback != default) pendingKnockback = knockback;
 
         if (hp <= 0f) { StartCoroutine(DieRoutine()); return; }
 
@@ -344,30 +276,41 @@ public class Enemy : MonoBehaviour
         foreach (Collider2D col in GetComponents<Collider2D>())
             col.enabled = false;
 
-        // Se tem animacao de morte, espera ela terminar; senao some rapido
+        // ── NOVO: dropa almas para o SoulManager ──────────────────────────
+        DropSouls();
+
         float destroyDelay = (anim != null && anim.runtimeAnimatorController != null) ? 1.5f : 0.1f;
         yield return new WaitForSeconds(destroyDelay);
         Destroy(gameObject);
     }
 
+    /// <summary>
+    /// Calcula o drop com variação aleatória e envia ao SoulManager.
+    /// </summary>
+    private void DropSouls()
+    {
+        if (SoulManager.Instance == null) return;
+
+        int variance = Random.Range(-soulDropVariance, soulDropVariance + 1);
+        int finalDrop = Mathf.Max(1, soulDropAmount + variance);
+
+        SoulManager.Instance.AddSouls(finalDrop);
+        Debug.Log($"[Enemy] Morreu → +{finalDrop} almas dropadas.");
+    }
+
     // ── AUXILIARES ───────────────────────────────────────────────────────
+
     private float Dist() =>
         player != null ? Vector2.Distance(transform.position, player.position) : float.MaxValue;
 
     private void UpdateFacing()
     {
         if (state == State.Dead) return;
-
         float dir = 0f;
-        if (state == State.Chasing && player != null)
-            dir = player.position.x - transform.position.x;
-        else if (state == State.Wandering)
-            dir = wanderDir;
-        else if (rb.linearVelocity.x != 0f)
-            dir = rb.linearVelocity.x;
-
-        if (Mathf.Abs(dir) > 0.01f)
-            transform.localScale = new Vector3(dir > 0 ? 1f : -1f, 1f, 1f);
+        if (state == State.Chasing && player != null) dir = player.position.x - transform.position.x;
+        else if (state == State.Wandering) dir = wanderDir;
+        else if (rb.linearVelocity.x != 0f) dir = rb.linearVelocity.x;
+        if (Mathf.Abs(dir) > 0.01f) transform.localScale = new Vector3(dir > 0 ? 1f : -1f, 1f, 1f);
     }
 
     private void PlayAnim(string name)
@@ -377,21 +320,14 @@ public class Enemy : MonoBehaviour
     }
 
     // ── GIZMOS ───────────────────────────────────────────────────────────
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, aggroRange);
-
         Gizmos.color = new Color(1f, 0.5f, 0f);
         Gizmos.DrawWireSphere(transform.position, deaggroRange);
-
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, stopDistance);
-
-        // Mostra raio de deteccao de parede
-        if (Application.isPlaying) return;
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawRay(transform.position, Vector3.right * wallCheckDist);
-        Gizmos.DrawRay(transform.position, Vector3.left * wallCheckDist);
     }
 }

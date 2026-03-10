@@ -1,14 +1,15 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// SoulslikeKnight v4 � Com sistema de Estus (Dark Souls).
+/// SoulslikeKnight v5 — Integrado com SoulManager e PlayerStats.
 ///
-/// ALTERACOES v4:
-///   - Vida NAO regenera automaticamente
-///   - Cura so ocorre ao usar Estus (tecla O) com frascos disponiveis
-///   - Fogueira reabastece frascos mas NAO cura diretamente
-///   - Respawn por morte restaura vida cheia + frascos (comportamento Dark Souls)
+/// MUDANÇAS v5:
+///   - Morte notifica SoulManager (perde almas no chão)
+///   - Dano de ataque é controlado externamente pelo PlayerStats
+///   - MaxHealth pode ser reduzido pelo sacrifício de vida
+///   - Setter público para lightDamage/heavyDamage (usado pelo PlayerStats)
+///   - Propriedade MaxHealth exposta publicamente
 /// </summary>
 public class SoulslikeKnight : MonoBehaviour
 {
@@ -44,9 +45,6 @@ public class SoulslikeKnight : MonoBehaviour
     private float currentStamina;
     private float staminaRegenTimer;
 
-    // ------------------------------------------------------------------ //
-    //  ESTUS � Dark Souls: vida so volta com frasco, nunca regenera sozinha
-    // ------------------------------------------------------------------ //
     [Header("Estus / Pocao (tecla O)")]
     [SerializeField] private int maxEstusCharges = 5;
     [SerializeField] private float estusHealAmount = 40f;
@@ -72,13 +70,13 @@ public class SoulslikeKnight : MonoBehaviour
     [SerializeField] private float rollForce = 11f;
     [SerializeField] private float rollDuration = 0.45f;
 
-    [Header("Ataque Leve (P) � combo Attack1 > Attack2")]
+    [Header("Ataque Leve (P) — combo Attack1 > Attack2")]
     [SerializeField] private float attack1Duration = 0.5f;
     [SerializeField] private float attack2Duration = 0.5f;
     [SerializeField] private float comboWindowTime = 0.25f;
     [SerializeField] private float staminaCostLight = 12f;
 
-    [Header("Ataque Forte (U) � golpe unico Attack3")]
+    [Header("Ataque Forte (U) — golpe unico Attack3")]
     [SerializeField] private float attack3Duration = 0.7f;
     [SerializeField] private float staminaCostHeavy = 30f;
     [SerializeField] private float lightDamage = 10f;
@@ -93,6 +91,18 @@ public class SoulslikeKnight : MonoBehaviour
     public event System.Action<float, float> OnHealthChanged;
     public event System.Action<float, float> OnStaminaChanged;
 
+    // ── Ref ao PlayerStats (opcional, no mesmo GameObject) ───────────────
+    private PlayerStats playerStats;
+
+    // ==================================================================== //
+    //  PROPRIEDADES PÚBLICAS
+    // ==================================================================== //
+
+    public float MaxHealth => maxHealth;
+    public int CurrentEstusCharges => currentEstusCharges;
+    public int MaxEstusCharges => maxEstusCharges;
+    public bool IsAttacking => currentState == State.Attacking;
+
     // ==================================================================== //
     //  UNITY CALLBACKS
     // ==================================================================== //
@@ -101,9 +111,11 @@ public class SoulslikeKnight : MonoBehaviour
     {
         rb2D = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        playerStats = GetComponent<PlayerStats>(); // pode ser null, tudo bem
+
         currentHealth = maxHealth;
         currentStamina = maxStamina;
-        currentEstusCharges = maxEstusCharges;  // come�a com todos os frascos
+        currentEstusCharges = maxEstusCharges;
         currentState = State.Idle;
     }
 
@@ -129,6 +141,9 @@ public class SoulslikeKnight : MonoBehaviour
 
     private void ReadInput()
     {
+        // Fadiga bloqueia ações de ataque
+        bool fatigued = playerStats != null && playerStats.isFatigued;
+
         moveInput = 0f;
         if (Input.GetKey(KeyCode.A)) moveInput = -1f;
         if (Input.GetKey(KeyCode.D)) moveInput = 1f;
@@ -139,8 +154,12 @@ public class SoulslikeKnight : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Q)) TryBlock();
         if (Input.GetKeyUp(KeyCode.Q) && currentState == State.Blocking) ExitBlocking();
 
-        if (Input.GetKeyDown(KeyCode.P)) TryLightAttack();
-        if (Input.GetKeyDown(KeyCode.U)) TryHeavyAttack();
+        if (!fatigued)
+        {
+            if (Input.GetKeyDown(KeyCode.P)) TryLightAttack();
+            if (Input.GetKeyDown(KeyCode.U)) TryHeavyAttack();
+        }
+
         if (Input.GetKeyDown(KeyCode.O)) TryHeal();
     }
 
@@ -152,18 +171,14 @@ public class SoulslikeKnight : MonoBehaviour
     {
         switch (currentState)
         {
-            case State.Rolling:
-                return;
-
+            case State.Rolling: return;
             case State.Blocking:
             case State.Hurt:
                 rb2D.linearVelocity = new Vector2(0f, rb2D.linearVelocity.y);
                 return;
-
             case State.Dead:
                 rb2D.linearVelocity = Vector2.zero;
                 return;
-
             case State.Jumping:
                 if (moveInput != 0f)
                 {
@@ -284,6 +299,10 @@ public class SoulslikeKnight : MonoBehaviour
         comboWindowOpen = false;
         ChangeState(State.Attacking);
         ConsumeStamina(staminaCostLight);
+
+        // Notifica PlayerStats (desgaste da lâmina)
+        playerStats?.OnAttackPerformed();
+
         StartCoroutine(LightAttackRoutine());
     }
 
@@ -316,6 +335,10 @@ public class SoulslikeKnight : MonoBehaviour
         comboWindowOpen = false; lightComboStep = 0;
         ChangeState(State.Attacking);
         ConsumeStamina(staminaCostHeavy);
+
+        // Notifica PlayerStats (desgaste da lâmina)
+        playerStats?.OnAttackPerformed();
+
         StartCoroutine(HeavyAttackRoutine());
     }
 
@@ -327,14 +350,14 @@ public class SoulslikeKnight : MonoBehaviour
     }
 
     // ==================================================================== //
-    //  HEAL � so cura com Estus, vida NUNCA regenera automaticamente
+    //  HEAL
     // ==================================================================== //
 
     private void TryHeal()
     {
         if (currentState != State.Idle && currentState != State.Running) return;
-        if (currentEstusCharges <= 0) return; // SEM FRASCOS = SEM CURA
-        if (currentHealth >= maxHealth) return; // ja esta cheio, nao gasta frasco
+        if (currentEstusCharges <= 0) return;
+        if (currentHealth >= maxHealth) return;
 
         currentEstusCharges--;
         OnEstusChanged?.Invoke(currentEstusCharges, maxEstusCharges);
@@ -346,17 +369,11 @@ public class SoulslikeKnight : MonoBehaviour
     private IEnumerator HealRoutine()
     {
         animator.Play(HEAL);
-        yield return new WaitForSeconds(estusDuration); // cura so ocorre APOS animacao terminar
-
+        yield return new WaitForSeconds(estusDuration);
         RestoreHealth(estusHealAmount);
-
         if (currentState == State.Healing) ChangeState(State.Idle);
     }
 
-    /// <summary>
-    /// Chamado pela Bonfire ao descansar.
-    /// Reabastece frascos mas NAO cura a vida � igual ao Dark Souls.
-    /// </summary>
     public void RefillEstus()
     {
         currentEstusCharges = maxEstusCharges;
@@ -396,13 +413,18 @@ public class SoulslikeKnight : MonoBehaviour
         ChangeState(State.Dead);
         rb2D.linearVelocity = Vector2.zero;
         animator.Play(DEATH);
+
+        // ── NOVO: notifica SoulManager das almas perdidas ──
+        if (SoulManager.Instance != null)
+            SoulManager.Instance.OnPlayerDied(transform.position);
+
         StartCoroutine(DeathAndRespawn());
     }
 
     private IEnumerator DeathAndRespawn()
     {
         yield return new WaitForSeconds(2f);
-        Bonfire.RespawnPlayerAtCheckpoint(this); // Bonfire restaura vida + frascos
+        Bonfire.RespawnPlayerAtCheckpoint(this);
     }
 
     public void RestoreHealth(float amount)
@@ -423,6 +445,16 @@ public class SoulslikeKnight : MonoBehaviour
         OnStaminaChanged?.Invoke(currentStamina, maxStamina);
     }
 
+    /// <summary>
+    /// Reduz a vida MÁXIMA permanentemente (usado pelo Sacrifício de Vida).
+    /// </summary>
+    public void ReduceMaxHealth(float amount)
+    {
+        maxHealth = Mathf.Max(10f, maxHealth - amount);
+        currentHealth = Mathf.Min(currentHealth, maxHealth);
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
     // ==================================================================== //
     //  STAMINA
     // ==================================================================== //
@@ -432,6 +464,10 @@ public class SoulslikeKnight : MonoBehaviour
         currentStamina = Mathf.Max(0f, currentStamina - amount);
         staminaRegenTimer = staminaRegenDelay;
         OnStaminaChanged?.Invoke(currentStamina, maxStamina);
+
+        // Fadiga se stamina zerar durante sprint/combate intenso
+        if (currentStamina <= 0f)
+            playerStats?.TriggerFatigue();
     }
 
     private void HandleStaminaRegen()
@@ -441,6 +477,13 @@ public class SoulslikeKnight : MonoBehaviour
         currentStamina = Mathf.Min(maxStamina, currentStamina + staminaRegenRate * Time.deltaTime);
         OnStaminaChanged?.Invoke(currentStamina, maxStamina);
     }
+
+    // ==================================================================== //
+    //  SETTERS DE DANO (usados pelo PlayerStats para aplicar modificadores)
+    // ==================================================================== //
+
+    public void SetLightDamage(float value) => lightDamage = value;
+    public void SetHeavyDamage(float value) => heavyDamage = value;
 
     // ==================================================================== //
     //  STATE MACHINE / ANIMACAO
@@ -477,16 +520,11 @@ public class SoulslikeKnight : MonoBehaviour
 
     public float GetLightDamage() => lightDamage;
     public float GetHeavyDamage() => heavyDamage;
-    public bool IsAttacking => currentState == State.Attacking;
-    public int CurrentEstusCharges => currentEstusCharges;
-    public int MaxEstusCharges => maxEstusCharges;
 
     private void FlipSprite()
     {
         if (currentState == State.Attacking || currentState == State.Blocking || currentState == State.Dead) return;
-
         float reference = (currentState == State.Jumping && moveInput != 0f) ? moveInput : rb2D.linearVelocity.x;
-
         if (reference < -0.01f) transform.localScale = new Vector3(-1f, 1f, 1f);
         else if (reference > 0.01f) transform.localScale = new Vector3(1f, 1f, 1f);
     }

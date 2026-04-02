@@ -2,23 +2,21 @@
 using UnityEngine;
 
 /// <summary>
-/// Enemy v2 — Integrado com SoulManager.
+/// Enemy v3 — Integrado com SoulManager e PlayerBase.
 ///
-/// MUDANÇAS v2:
-///   - Inimigo dropa Almas ao morrer (SoulManager.Instance.AddSouls)
-///   - SoulDropAmount configurável no Inspector
-///   - Lógica principal inalterada
+/// MUDANÇAS v3:
+///   - playerKnight trocado por PlayerBase → funciona com SoulslikeKnight E PaladinKnight
+///   - Busca por FindFirstObjectByType<PlayerBase> para garantir compatibilidade
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
-public class Enemy : MonoBehaviour
-{
-    private enum State { Wandering, Chasing, Windup, Attacking, Recovery, Hurt, Dead }
-    private State state = State.Wandering;
+public class Enemy : MonoBehaviour {
+    protected enum State { Wandering, Chasing, Windup, Attacking, Recovery, Hurt, Dead }
+    protected State state = State.Wandering;
 
-    private Rigidbody2D rb;
-    private Animator anim;
-    private Transform player;
-    private SoulslikeKnight playerKnight;
+    protected Rigidbody2D rb;
+    protected Animator anim;
+    protected Transform player;
+    protected PlayerBase playerKnight;
 
     private const string A_IDLE = "Idle";
     private const string A_WALK = "Walk";
@@ -27,9 +25,9 @@ public class Enemy : MonoBehaviour
     private const string A_DEATH = "Death";
 
     [Header("Vida")]
-    [SerializeField] private float maxHealth = 50f;
-    [SerializeField] private float hurtStunTime = 0.35f;
-    private float hp;
+    [SerializeField] protected float maxHealth = 50f;
+    [SerializeField] protected float hurtStunTime = 0.35f;
+    protected float hp;
 
     // ── NOVO: Almas dropadas ao morrer ───────────────────────────────────
     [Header("Drop de Almas")]
@@ -73,26 +71,22 @@ public class Enemy : MonoBehaviour
     public event System.Action<float, float> OnHealthChanged;
 
     // ====================================================================
-    private void Start()
-    {
+    protected virtual void Start() {
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
         hp = maxHealth;
 
         GameObject p = GameObject.FindGameObjectWithTag("Player");
-        if (p == null)
-        {
-            SoulslikeKnight found = FindFirstObjectByType<SoulslikeKnight>();
+        if (p == null) {
+            PlayerBase found = FindFirstObjectByType<PlayerBase>();  // ← era SoulslikeKnight
             if (found != null) p = found.gameObject;
         }
 
-        if (p != null)
-        {
+        if (p != null) {
             player = p.transform;
-            playerKnight = p.GetComponent<SoulslikeKnight>();
+            playerKnight = p.GetComponent<PlayerBase>();             // ← era SoulslikeKnight
         }
-        else
-        {
+        else {
             Debug.LogError("[Enemy] PLAYER NAO ENCONTRADO!");
         }
 
@@ -100,8 +94,7 @@ public class Enemy : MonoBehaviour
         wanderTimer = Random.Range(minWanderTime, maxWanderTime);
 
         GameObject playerObj = player != null ? player.gameObject : GameObject.FindGameObjectWithTag("Player");
-        if (playerObj != null)
-        {
+        if (playerObj != null) {
             Collider2D[] enemyCols = GetComponents<Collider2D>();
             Collider2D[] playerCols = playerObj.GetComponents<Collider2D>();
             foreach (Collider2D ec in enemyCols)
@@ -110,18 +103,15 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
+    private void Update() {
         if (state == State.Dead) return;
 
-        if (pendingKnockback != Vector2.zero)
-        {
+        if (pendingKnockback != Vector2.zero) {
             rb.linearVelocity = pendingKnockback;
             pendingKnockback = Vector2.zero;
         }
 
-        switch (state)
-        {
+        switch (state) {
             case State.Wandering: UpdateWander(); break;
             case State.Chasing: UpdateChasing(); break;
         }
@@ -129,23 +119,19 @@ public class Enemy : MonoBehaviour
         UpdateFacing();
     }
 
-    private void FixedUpdate()
-    {
+    private void FixedUpdate() {
         if (state == State.Dead || state == State.Hurt ||
-            state == State.Windup || state == State.Attacking || state == State.Recovery)
-        {
+            state == State.Windup || state == State.Attacking || state == State.Recovery) {
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
         }
     }
 
     // ── WANDER ───────────────────────────────────────────────────────────
 
-    private void UpdateWander()
-    {
+    private void UpdateWander() {
         if (player != null && Dist() <= aggroRange) { state = State.Chasing; return; }
 
-        if (isWanderPaused)
-        {
+        if (isWanderPaused) {
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
             PlayAnim(A_IDLE);
             return;
@@ -153,8 +139,7 @@ public class Enemy : MonoBehaviour
 
         bool hitWall = Physics2D.Raycast(transform.position, new Vector2(wanderDir, 0f), wallCheckDist, groundLayer);
         bool atEdge = false;
-        if (groundCheck != null)
-        {
+        if (groundCheck != null) {
             Vector3 checkPos = groundCheck.position + new Vector3(wanderDir * edgeCheckDist, 0f, 0f);
             atEdge = !Physics2D.OverlapCircle(checkPos, 0.15f, groundLayer);
         }
@@ -168,8 +153,7 @@ public class Enemy : MonoBehaviour
         PlayAnim(A_WALK);
     }
 
-    private IEnumerator WanderPause()
-    {
+    private IEnumerator WanderPause() {
         isWanderPaused = true;
         rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
         PlayAnim(A_IDLE);
@@ -181,15 +165,13 @@ public class Enemy : MonoBehaviour
 
     // ── CHASING ──────────────────────────────────────────────────────────
 
-    private void UpdateChasing()
-    {
+    private void UpdateChasing() {
         if (player == null) { state = State.Wandering; return; }
         float dist = Dist();
 
         if (dist > deaggroRange) { state = State.Wandering; return; }
 
-        if (dist <= stopDistance)
-        {
+        if (dist <= stopDistance) {
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
             StartCoroutine(AttackSequence());
             return;
@@ -202,8 +184,7 @@ public class Enemy : MonoBehaviour
 
     // ── ATAQUE ───────────────────────────────────────────────────────────
 
-    private IEnumerator AttackSequence()
-    {
+    private IEnumerator AttackSequence() {
         state = State.Windup;
         rb.linearVelocity = Vector2.zero;
         PlayAnim(A_IDLE);
@@ -214,9 +195,8 @@ public class Enemy : MonoBehaviour
         PlayAnim(A_ATTACK);
         yield return new WaitForSeconds(attackDuration * 0.5f);
 
-        if (player != null && Dist() <= attackRange * 1.4f)
-        {
-            if (playerKnight == null) playerKnight = player.GetComponent<SoulslikeKnight>();
+        if (player != null && Dist() <= attackRange * 1.4f) {
+            if (playerKnight == null) playerKnight = player.GetComponent<PlayerBase>(); // ← era SoulslikeKnight
             playerKnight?.TakeDamage(attackDamage);
         }
 
@@ -226,8 +206,7 @@ public class Enemy : MonoBehaviour
         state = State.Recovery;
         float recoverDir = player != null ? -Mathf.Sign(player.position.x - transform.position.x) : wanderDir;
         float elapsed = 0f;
-        while (elapsed < recoveryTime)
-        {
+        while (elapsed < recoveryTime) {
             rb.linearVelocity = new Vector2(recoverDir * recoverySpeed, rb.linearVelocity.y);
             elapsed += Time.deltaTime;
             yield return null;
@@ -240,8 +219,7 @@ public class Enemy : MonoBehaviour
 
     // ── DANO ─────────────────────────────────────────────────────────────
 
-    public void TakeDamage(float amount, Vector2 knockback = default)
-    {
+    public virtual void TakeDamage(float amount, Vector2 knockback = default) {
         if (state == State.Dead) return;
 
         hp = Mathf.Max(0f, hp - amount);
@@ -255,8 +233,7 @@ public class Enemy : MonoBehaviour
         StartCoroutine(HurtRoutine());
     }
 
-    private IEnumerator HurtRoutine()
-    {
+    private IEnumerator HurtRoutine() {
         state = State.Hurt;
         rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
         PlayAnim(A_HURT);
@@ -266,8 +243,7 @@ public class Enemy : MonoBehaviour
             state = (player != null && Dist() <= deaggroRange) ? State.Chasing : State.Wandering;
     }
 
-    private IEnumerator DieRoutine()
-    {
+    private IEnumerator DieRoutine() {
         StopAllCoroutines();
         state = State.Dead;
         rb.linearVelocity = Vector2.zero;
@@ -287,8 +263,7 @@ public class Enemy : MonoBehaviour
     /// <summary>
     /// Calcula o drop com variação aleatória e envia ao SoulManager.
     /// </summary>
-    private void DropSouls()
-    {
+    private void DropSouls() {
         if (SoulManager.Instance == null) return;
 
         int variance = Random.Range(-soulDropVariance, soulDropVariance + 1);
@@ -303,8 +278,7 @@ public class Enemy : MonoBehaviour
     private float Dist() =>
         player != null ? Vector2.Distance(transform.position, player.position) : float.MaxValue;
 
-    private void UpdateFacing()
-    {
+    private void UpdateFacing() {
         if (state == State.Dead) return;
         float dir = 0f;
         if (state == State.Chasing && player != null) dir = player.position.x - transform.position.x;
@@ -313,16 +287,14 @@ public class Enemy : MonoBehaviour
         if (Mathf.Abs(dir) > 0.01f) transform.localScale = new Vector3(dir > 0 ? 1f : -1f, 1f, 1f);
     }
 
-    private void PlayAnim(string name)
-    {
+    private void PlayAnim(string name) {
         if (anim != null && anim.runtimeAnimatorController != null)
             anim.Play(name);
     }
 
     // ── GIZMOS ───────────────────────────────────────────────────────────
 
-    private void OnDrawGizmosSelected()
-    {
+    private void OnDrawGizmosSelected() {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, aggroRange);
         Gizmos.color = new Color(1f, 0.5f, 0f);

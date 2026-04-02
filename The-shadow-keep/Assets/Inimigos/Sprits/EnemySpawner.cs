@@ -2,8 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class EnemySpawner : MonoBehaviour
-{
+public class EnemySpawner : MonoBehaviour {
     [Header("Setup")]
     public GameObject enemyPrefab;
     public Transform[] spawnPoints;
@@ -20,17 +19,14 @@ public class EnemySpawner : MonoBehaviour
     private int aliveCount = 0;
     public bool AllEnemiesDead => aliveCount <= 0 && hasTriggered;
 
-    private void Start()
-    {
+    private void Start() {
         // Auto-registra este spawner na Bonfire
         Bonfire.RegisterSpawner(this);
     }
 
     // A ÚNICA MUDANÇA FOI NESTA LINHA: OnTriggerEnter2D e Collider2D
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        if (other.CompareTag("Player") && !hasTriggered)
-        {
+    private void OnTriggerEnter2D(Collider2D other) {
+        if (other.CompareTag("Player") && !hasTriggered) {
             hasTriggered = true;
             StartCoroutine(SpawnWave());
         }
@@ -40,10 +36,8 @@ public class EnemySpawner : MonoBehaviour
     //  SPAWN
     // ==================================================================== //
 
-    IEnumerator SpawnWave()
-    {
-        for (int i = 0; i < numberOfEnemies; i++)
-        {
+    IEnumerator SpawnWave() {
+        for (int i = 0; i < numberOfEnemies; i++) {
             if (spawnPoints.Length == 0) break;
 
             Transform sp = spawnPoints[Random.Range(0, spawnPoints.Length)];
@@ -64,15 +58,13 @@ public class EnemySpawner : MonoBehaviour
     //  CHAMADO PELA BONFIRE ao descansar ou ao morrer
     // ==================================================================== //
 
-    public void ResetSpawner()
-    {
+    public void ResetSpawner() {
         if (!respawnOnBonfireRest) return;
 
         StopAllCoroutines();
 
         // Destroi inimigos vivos
-        foreach (GameObject enemy in spawnedEnemies)
-        {
+        foreach (GameObject enemy in spawnedEnemies) {
             if (enemy != null) Destroy(enemy);
         }
         spawnedEnemies.Clear();
@@ -84,8 +76,7 @@ public class EnemySpawner : MonoBehaviour
     }
 
 
-    public void OnEnemyDied(GameObject enemy)
-    {
+    public void OnEnemyDied(GameObject enemy) {
         spawnedEnemies.Remove(enemy);
         aliveCount = Mathf.Max(0, aliveCount - 1);
 
@@ -96,12 +87,10 @@ public class EnemySpawner : MonoBehaviour
 // ====================================================================== //
 // notifica o spawner quando o inimigo morre
 // ====================================================================== //
-public class EnemyDeathNotifier : MonoBehaviour
-{
+public class EnemyDeathNotifier : MonoBehaviour {
     [HideInInspector] public EnemySpawner spawner;
 
-    private void OnDestroy()
-    {
+    private void OnDestroy() {
         if (spawner != null)
             spawner.OnEnemyDied(gameObject);
     }

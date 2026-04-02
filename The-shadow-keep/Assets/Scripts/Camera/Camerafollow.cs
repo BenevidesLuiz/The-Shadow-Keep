@@ -2,7 +2,7 @@
 
 public class Camerafollow : MonoBehaviour {
     public Transform target;   // Player
-    public Vector3 offset;     // Dist�ncia da c�mera
+    public Vector3 offset;     // Distancia da c�mera
     public float smoothSpeed = 0.125f;
     public bool travarCamera = false;
     [Header("Limites da c�mera")]
@@ -18,7 +18,7 @@ public class Camerafollow : MonoBehaviour {
         if (target != null) {
             Vector3 desiredPosition = target.position + offset;
 
-            // Limita a posi��o da c�mera
+            // Limita a posicao da camera
             float clampedX = Mathf.Clamp(desiredPosition.x, minX, maxX);
             float clampedY = Mathf.Clamp(desiredPosition.y, minY, maxY);
             Vector3 boundedPosition;

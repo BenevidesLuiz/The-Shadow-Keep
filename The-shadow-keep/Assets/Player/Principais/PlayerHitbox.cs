@@ -11,8 +11,7 @@ using UnityEngine;
 ///   Opcao A (Animation Events): chame ActivateHitbox() e DeactivateHitbox() nos clips
 ///   Opcao B (automatico):       marque autoActivate = true — ativa sozinho quando atacar
 /// </summary>
-public class PlayerHitbox : MonoBehaviour
-{
+public class PlayerHitbox : MonoBehaviour {
     [Header("Configuracao")]
     [SerializeField] private bool isHeavy = false;
     [SerializeField] private float knockbackForce = 5f;
@@ -27,14 +26,13 @@ public class PlayerHitbox : MonoBehaviour
     // Controle do auto-activate
     private bool wasAttacking = false;
 
-    private void Awake()
-    {
+    private void Awake() {
         knight = GetComponentInParent<SoulslikeKnight>();
         hitCollider = GetComponent<Collider2D>();
         hitCollider.enabled = false;
     }
 
-    private void Update()  {
+    private void Update() {
         if (!autoActivate || knight == null) return;
 
         // Detecta quando o knight entra/sai do estado de ataque via reflection
@@ -42,31 +40,26 @@ public class PlayerHitbox : MonoBehaviour
         // Metodo mais simples: expoe uma propriedade publica no knight
         bool isAttacking = knight.IsAttacking;
 
-        if (isAttacking && !wasAttacking)
-        {
+        if (isAttacking && !wasAttacking) {
             ActivateHitbox();
         }
-        else if (!isAttacking && wasAttacking)
-        {
+        else if (!isAttacking && wasAttacking) {
             DeactivateHitbox();
         }
 
         wasAttacking = isAttacking;
     }
 
-    public void ActivateHitbox()
-    {
+    public void ActivateHitbox() {
         hitThisSwing.Clear();
         hitCollider.enabled = true;
     }
 
-    public void DeactivateHitbox()
-    {
+    public void DeactivateHitbox() {
         hitCollider.enabled = false;
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
-    {
+    private void OnTriggerEnter2D(Collider2D other) {
         if (other.transform.IsChildOf(knight.transform)) return;
         if (hitThisSwing.Contains(other)) return;
 

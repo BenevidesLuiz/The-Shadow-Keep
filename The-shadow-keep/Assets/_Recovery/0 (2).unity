@@ -3722,11 +3722,7 @@ MonoBehaviour:
   groundCheckRadius: 0.2
   rollForce: 10
   rollDuration: 0.4
-  attack1Duration: 0.5
-  attack2Duration: 0.5
-  comboWindowTime: 0.25
   staminaCostLight: 9
-  attack3Duration: 0.6
   staminaCostHeavy: 19
   lightDamage: 10
   heavyDamage: 16

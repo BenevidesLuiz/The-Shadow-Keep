@@ -13,8 +13,7 @@
 ///   OnSoulsChanged(int atual)  — sempre que o valor muda
 ///   OnSoulsLost(int perdidos, Vector3 pos) — ao morrer, para spawnar orbe
 /// </summary>
-public class SoulManager : MonoBehaviour
-{
+public class SoulManager : MonoBehaviour {
     // ── Singleton ─────────────────────────────────────────────────────────
     public static SoulManager Instance { get; private set; }
 
@@ -39,8 +38,7 @@ public class SoulManager : MonoBehaviour
     public int PendingRecoverySouls => pendingRecoverySouls;
 
     // ====================================================================
-    private void Awake()
-    {
+    private void Awake() {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
@@ -54,8 +52,7 @@ public class SoulManager : MonoBehaviour
     /// <summary>
     /// Adiciona almas ao jogador (chamado quando inimigo morre).
     /// </summary>
-    public void AddSouls(int amount)
-    {
+    public void AddSouls(int amount) {
         if (amount <= 0) return;
         currentSouls += amount;
         OnSoulsChanged?.Invoke(currentSouls);
@@ -69,10 +66,8 @@ public class SoulManager : MonoBehaviour
     /// <summary>
     /// Gasta almas. Retorna true se tinha saldo suficiente.
     /// </summary>
-    public bool SpendSouls(int amount)
-    {
-        if (amount > currentSouls)
-        {
+    public bool SpendSouls(int amount) {
+        if (amount > currentSouls) {
             Debug.Log($"[SoulManager] Almas insuficientes: {currentSouls} / {amount}");
             return false;
         }
@@ -93,8 +88,7 @@ public class SoulManager : MonoBehaviour
     /// Chamado pelo SoulslikeKnight ao morrer.
     /// Guarda as almas para possível recuperação.
     /// </summary>
-    public void OnPlayerDied(Vector3 position)
-    {
+    public void OnPlayerDied(Vector3 position) {
         if (currentSouls <= 0) return;
 
         pendingRecoverySouls = currentSouls;
@@ -111,8 +105,7 @@ public class SoulManager : MonoBehaviour
     /// <summary>
     /// Chamado pelo orbe de recuperação ao ser coletado.
     /// </summary>
-    public void RecoverSouls()
-    {
+    public void RecoverSouls() {
         if (!hasPendingRecovery) return;
 
         int recovered = pendingRecoverySouls;
@@ -129,8 +122,7 @@ public class SoulManager : MonoBehaviour
     /// <summary>
     /// Se morrer de novo antes de recuperar, as almas pendentes são perdidas.
     /// </summary>
-    public void DiscardPendingSouls()
-    {
+    public void DiscardPendingSouls() {
         pendingRecoverySouls = 0;
         hasPendingRecovery = false;
         Debug.Log("[SoulManager] Almas pendentes perdidas para sempre.");

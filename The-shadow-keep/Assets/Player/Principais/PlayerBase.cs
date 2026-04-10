@@ -1,5 +1,9 @@
 ﻿using System.Collections;
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
+using static PlayerStats;
 
 /// <summary>
 /// PlayerBase — Classe base abstrata para todos os personagens jogáveis.
@@ -47,6 +51,13 @@ public abstract class PlayerBase : MonoBehaviour {
     protected const string ANIM_BLOCK = "Block";
     protected const string ANIM_DEATH = "Death";
     protected const string ANIM_HEAL = "Heal";
+    protected const string ANIM_ATTACK_LIGHT = "Attack1";
+    protected const string ANIM_ATTACK_SPECIAL1 = "Attack2";
+    protected const string ANIM_ATTACK_SPECIAL2 = "Attack3";
+
+
+    //valor da varial não ta cetado aqui
+    //a dispocição de hierarquia ta ruim
 
     // ------------------------------------------------------------------ //
     //  Inspector — Vida
@@ -123,8 +134,41 @@ public abstract class PlayerBase : MonoBehaviour {
     [Header("Hurt")]
     [SerializeField] protected float hurtDuration = 0.6f;
 
+    protected void TryAttackLight() {
+        if (currentState == State.Dead || currentState == State.Blocking) return;
+        if (IsAttacking) return;
+        if (currentStamina < staminaCostLight) return;
+
+        ConsumeStamina(staminaCostLight);
+        playerStats?.OnAttackPerformed();
+        IsAttacking = true;
+        animator.Play(ANIM_ATTACK_LIGHT);
+    }
+
+    protected void TryAttackSpecial1() {
+        if (currentState == State.Dead || currentState == State.Blocking) return;
+        if (IsAttacking) return;
+        if (currentStamina < staminaCostHeavy) return;
+
+        ConsumeStamina(staminaCostHeavy);
+        playerStats?.OnAttackPerformed();
+        IsAttacking = true;
+        animator.Play(ANIM_ATTACK_SPECIAL1);
+    }
+
+    protected void TryAttackSpecial2() {
+        if (currentState == State.Dead || currentState == State.Blocking) return;
+        if (IsAttacking) return;
+        if (currentStamina < staminaCostHeavy) return;
+
+        ConsumeStamina(staminaCostHeavy);
+        playerStats?.OnAttackPerformed();
+        IsAttacking = true;
+        animator.Play(ANIM_ATTACK_SPECIAL2);
+    }
+
     // ------------------------------------------------------------------ //
-    //  Ref ao PlayerStats (opcional)
+    //  Ref ao PlayerStats
     // ------------------------------------------------------------------ //
     protected PlayerStats playerStats;
 
@@ -133,6 +177,9 @@ public abstract class PlayerBase : MonoBehaviour {
     // ================================================================== //
 
     public float MaxHealth => maxHealth;
+    public float CurrentHealth => currentHealth;
+    public float CurrentStamina => currentStamina;
+    public float MaxStamina => maxStamina;
     public int CurrentEstusCharges => currentEstusCharges;
     public int MaxEstusCharges => maxEstusCharges;
 
@@ -183,6 +230,43 @@ public abstract class PlayerBase : MonoBehaviour {
     protected virtual void FixedUpdate() {
         if (currentState == State.Dead) return;
         ApplyMovement();
+    }
+
+
+    public void SavePlayer() {
+        PlayerStats stats = GetComponent<PlayerStats>();
+        SaveSystem.SavePlayer(this, stats);
+    }
+
+    public void LoadPlayer() {
+        PlayerData data = SaveSystem.LoadPlayer();
+        if (data == null) return;
+
+        // PlayerBase
+        RestoreHealth(data.currentHealth - currentHealth);
+        maxHealth = data.maxHealth;
+        RestoreStamina(data.currentStamina - currentStamina);
+        maxStamina = data.maxStamina;
+        currentEstusCharges = data.currentEstusCharges;
+        maxEstusCharges = data.maxEstusCharges;
+        SetLightDamage(data.lightDamage);
+        SetHeavyDamage(data.heavyDamage);
+
+        // Posição
+        transform.position = new Vector3(data.position[0], data.position[1], 0f);
+
+        // PlayerStats
+        PlayerStats stats = GetComponent<PlayerStats>();
+        if (stats != null) {
+            stats.strength = data.strength;
+            stats.bladeSharpness = data.bladeSharpness;
+            stats.currentClass = data.characterClass;
+            stats.ApplyStatsToKnight();
+        }
+
+        // SoulManager
+        if (SoulManager.Instance != null)
+            SoulManager.Instance.AddSouls(data.souls);
     }
 
     // ================================================================== //
@@ -389,7 +473,12 @@ public abstract class PlayerBase : MonoBehaviour {
 
     private IEnumerator DeathAndRespawn() {
         yield return new WaitForSeconds(2f);
-        Bonfire.RespawnPlayerAtCheckpoint(this);
+
+        // Guarda em qual fase estava
+        GameManager.Instance.currentScene = SceneManager.GetActiveScene().name;
+
+        SavePlayer();
+        GameManager.Instance.GoToSceneInstant("Morte");
     }
 
     public void RestoreHealth(float amount) {

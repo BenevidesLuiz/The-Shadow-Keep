@@ -23,18 +23,8 @@ public class SoulslikeKnight : PlayerBase {
         bool fatigued = playerStats != null && playerStats.isFatigued;
         if (fatigued) return;
 
-        // Ataque leve
-        if (Input.GetKeyDown(KeyCode.P) && currentStamina >= staminaCostLight) {
-            ConsumeStamina(staminaCostLight);
-            playerStats?.OnAttackPerformed();
-            animator.SetTrigger("attack");
-        }
-
-        // Ataque pesado
-        if (Input.GetKeyDown(KeyCode.U) && currentStamina >= staminaCostHeavy) {
-            ConsumeStamina(staminaCostHeavy);
-            playerStats?.OnAttackPerformed();
-            animator.SetTrigger("special");
-        }
+        if (Input.GetKeyDown(KeyCode.P)) TryAttackLight();
+        if (Input.GetKeyDown(KeyCode.U)) TryAttackSpecial1();
+        if (Input.GetKeyDown(KeyCode.I)) TryAttackSpecial2();
     }
 }

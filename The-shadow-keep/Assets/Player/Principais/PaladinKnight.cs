@@ -90,29 +90,15 @@ public class PaladinKnight : PlayerBase {
         bool fatigued = playerStats != null && playerStats.isFatigued;
 
         if (!fatigued) {
-            // ── Ataque Sagrado (leve) ──
-            if (Input.GetKeyDown(KeyCode.P) && currentStamina >= staminaCostLight) {
-                ConsumeStamina(staminaCostLight);
-                playerStats?.OnAttackPerformed();
-                animator.SetTrigger("attack");
-                // A cura é aplicada pelo HitCallback após o dano ser confirmado
-                // (ver OnHolyHit abaixo, chamado pelo PlayerHitbox via SendMessage)
-            }
-
-            // ── Golpe Divino (pesado) ──
-            if (Input.GetKeyDown(KeyCode.U) && currentStamina >= staminaCostHeavy) {
-                ConsumeStamina(staminaCostHeavy);
-                playerStats?.OnAttackPerformed();
-                animator.SetTrigger("special");
-            }
+            if (Input.GetKeyDown(KeyCode.P)) TryAttackLight();    // life steal aplicado no OnHolyHit
+            if (Input.GetKeyDown(KeyCode.U)) TryAttackSpecial1();
+            if (Input.GetKeyDown(KeyCode.I)) TryAttackSpecial2();
         }
 
-        // ── Bênção Divina (sem bloqueio por fadiga — é defensiva) ──
-        if (Input.GetKeyDown(KeyCode.R) && blessingCooldownTimer <= 0f && !blessingActive) {
+        // Bênção Divina — sem bloqueio por fadiga
+        if (Input.GetKeyDown(KeyCode.R) && blessingCooldownTimer <= 0f && !blessingActive)
             StartCoroutine(BlessingRoutine());
-        }
     }
-
     // ================================================================== //
     //  BÊNÇÃO DIVINA
     // ================================================================== //

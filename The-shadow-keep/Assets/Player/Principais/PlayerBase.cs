@@ -238,8 +238,9 @@ public abstract class PlayerBase : MonoBehaviour {
         SaveSystem.SavePlayer(this, stats);
     }
 
+    
     public void LoadPlayer() {
-        PlayerData data = SaveSystem.LoadPlayer();
+        PlayerData data = SaveSystem.LoadPlayer();  // ← Sem SaveGame.
         if (data == null) return;
 
         // PlayerBase
@@ -258,9 +259,11 @@ public abstract class PlayerBase : MonoBehaviour {
         // PlayerStats
         PlayerStats stats = GetComponent<PlayerStats>();
         if (stats != null) {
+            stats.level = data.level;
             stats.strength = data.strength;
             stats.bladeSharpness = data.bladeSharpness;
             stats.currentClass = data.characterClass;
+            stats.faith = data.faith;
             stats.ApplyStatsToKnight();
         }
 
@@ -268,7 +271,6 @@ public abstract class PlayerBase : MonoBehaviour {
         if (SoulManager.Instance != null)
             SoulManager.Instance.AddSouls(data.souls);
     }
-
     // ================================================================== //
     //  INPUT
     // ================================================================== //
@@ -555,6 +557,21 @@ public abstract class PlayerBase : MonoBehaviour {
             default: animator.speed = 1f; break;
         }
     }
+
+    // ================================================================== //
+    //  RECEBER STATUS DO MENU DE CRIAÇÃO
+    // ================================================================== //
+    public void SetCoreStatsFromMenu(float newMaxHealth, float newMaxStamina) {
+        maxHealth = newMaxHealth;
+        currentHealth = maxHealth;
+        maxStamina = newMaxStamina;
+        currentStamina = maxStamina;
+
+        // Atualiza as barras na tela, se houver
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        OnStaminaChanged?.Invoke(currentStamina, maxStamina);
+    }
+
 
     // ================================================================== //
     //  AUXILIARES

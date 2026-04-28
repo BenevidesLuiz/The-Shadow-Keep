@@ -11,7 +11,7 @@ using UnityEngine.UI;
 public class KnightUI : MonoBehaviour {
 
     [Header("Referência ao Personagem")]
-    [SerializeField] private PlayerBase knight;        // ← arraste qualquer player aqui
+    [SerializeField] private PlayerBase knight;       
     [SerializeField] private PlayerStats playerStats;
 
     [Header("Barra de Vida")]

@@ -58,18 +58,13 @@ public class PaladinKnight : PlayerBase {
     // Evento para a UI saber do cooldown (opcional)
     public event System.Action<float, float> OnBlessingCooldown; // (atual, max)
 
-    // ================================================================== //
-    //  UNITY CALLBACKS
-    // ================================================================== //
 
     protected override void Start() {
-        // Aplica stat diferenciados do Paladino antes do Start base
-        maxHealth += 20f;   // tanque
-        lightDamage -= 2f;    // compensa com life steal
-        heavyDamage += 4f;    // golpe divino mais pesado
-        staminaCostLight += 5f;    // ataques sagrados custam mais
-
-        base.Start();              // inicializa hp/stamina com os novos valores
+        maxHealth += 20f;   
+        lightDamage -= 2f;  
+        heavyDamage += 4f;   
+        staminaCostLight += 5f;
+        base.Start();              
     }
 
     protected override void Update() {

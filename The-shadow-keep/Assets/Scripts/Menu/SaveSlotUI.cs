@@ -10,7 +10,7 @@ public class SaveSlotUI : MonoBehaviour {
     public int slotNumber;
 
     [Header("Textos Visuais")]
-    [SerializeField] private TextMeshProUGUI textoNome;   // 👈 Agora puxamos o Nome!
+    [SerializeField] private TextMeshProUGUI textoNome; 
     [SerializeField] private TextMeshProUGUI textoClasse;
     [SerializeField] private TextMeshProUGUI textoLevel;
 

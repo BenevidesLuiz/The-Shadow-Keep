@@ -540,6 +540,11 @@ public abstract class PlayerBase : MonoBehaviour {
     protected void ChangeState(State newState) => currentState = newState;
 
     protected virtual void UpdateAnimation() {
+        if (animator != null)
+        {
+            animator.SetFloat("run", Mathf.Abs(moveInput));
+            Debug.Log("valor enviado ao animator: " + Mathf.Abs(moveInput));
+        }
         if (currentState == State.Rolling || IsAttacking) return;
 
         if (currentState == State.Idle || currentState == State.Running) {
@@ -551,8 +556,8 @@ public abstract class PlayerBase : MonoBehaviour {
                          && currentStamina > 0;
 
         switch (currentState) {
-            case State.Idle: animator.speed = 1f; animator.Play(ANIM_IDLE); break;
-            case State.Running: animator.speed = sprinting ? 1.5f : 1f; animator.Play(ANIM_RUN); break;
+            case State.Idle: animator.speed = 1f; break;
+            case State.Running: animator.speed = sprinting ? 1f : 0.7f; break;
             case State.Blocking: animator.speed = 1f; animator.Play(ANIM_BLOCK); break;
             default: animator.speed = 1f; break;
         }

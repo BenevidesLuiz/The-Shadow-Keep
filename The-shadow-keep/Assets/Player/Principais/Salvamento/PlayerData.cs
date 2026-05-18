@@ -36,6 +36,7 @@ public class PlayerData {
     }
 
     public PlayerData(PlayerBase player, PlayerStats stats) {
+        playerName = player.playerName;
         currentHealth = player.CurrentHealth;
         maxHealth = player.MaxHealth;
         currentStamina = player.CurrentStamina;

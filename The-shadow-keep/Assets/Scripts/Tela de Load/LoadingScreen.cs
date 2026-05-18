@@ -7,7 +7,6 @@ using TMPro;
 public class LoadingScreen : MonoBehaviour {
 
     [Header("UI do Loading")]
-    [SerializeField] private Image progressBar;
     [SerializeField] private TMP_Text tipText;
 
     [Header("Configurações")]
@@ -64,28 +63,16 @@ public class LoadingScreen : MonoBehaviour {
         op.allowSceneActivation = false;
         float elapsed = 0f;
 
-        // 3. Preenche a barra dependendo do que for mais lento: o carregamento real ou o 'minLoadTime'
+        // 3. Aguarda o carregamento técnico terminar E o tempo mínimo passar
         while (op.progress < 0.9f || elapsed < minLoadTime) {
             elapsed += Time.deltaTime;
-
-            float loadPercent = Mathf.Clamp01(op.progress / 0.9f);
-            float timePercent = Mathf.Clamp01(elapsed / minLoadTime);
-
-            if (progressBar != null) {
-                progressBar.fillAmount = Mathf.Min(loadPercent, timePercent);
-            }
-
             yield return null;
         }
 
-        if (progressBar != null) {
-            progressBar.fillAmount = 1f;
-        }
-
-        // Uma pequena pausa dramática de meio segundo para o jogador ver a barra cheia
+        // Uma pequena pausa dramática de meio segundo para a leitura final da dica
         yield return new WaitForSeconds(0.5f);
 
-        // 5. Destranca a porta e joga o player na fase!
+        // 4. Destranca a porta e joga o player na fase!
         op.allowSceneActivation = true;
     }
 }

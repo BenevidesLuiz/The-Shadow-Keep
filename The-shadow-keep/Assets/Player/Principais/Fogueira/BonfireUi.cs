@@ -310,6 +310,7 @@ private void AtualizarCoresConfirmacao() {
         if (playerBase != null && playerStats != null) {
             SaveSystem.SavePlayer(playerBase, playerStats);
         }
+        Time.timeScale = 1f;
 
         if (GameManager.Instance != null) {
             GameManager.Instance.GoToScene("Menu");

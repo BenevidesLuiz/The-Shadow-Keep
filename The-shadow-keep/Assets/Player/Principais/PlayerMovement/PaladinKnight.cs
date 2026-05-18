@@ -1,159 +1,197 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
-/// PaladinKnight — Paladino, herda de PlayerBase.
+/// PaladinKnight — Subclasse do Paladino com habilidades sagradas.
 ///
-/// HABILIDADES EXCLUSIVAS:
-///   ┌─────────────────────────────────────────────────────────────────┐
-///   │  Tecla P  →  Ataque Sagrado (leve)                             │
-///   │              Dano normal + cura o paladino em 20% do dano      │
-///   │                                                                 │
-///   │  Tecla U  →  Golpe Divino (pesado, trigger "special")          │
-///   │              Dano alto, consome mais stamina                    │
-///   │                                                                 │
-///   │  Tecla R  →  Bênção Divina (cooldown blessingCooldown s)       │
-///   │              Regena toda a stamina instantaneamente            │
-///   │              + bônus de regen de stamina por blessingDuration s │
-///   └─────────────────────────────────────────────────────────────────┘
+/// CARACTERÍSITCAS:
+///   - Ataque Leve: Golpe Sagrado com life steal de 20% do dano
+///   - Ataque Pesado: Golpe Divino com explosão em área e stun
+///   - Habilidade R: Bênção Divina — restaura stamina e aplica proteção
 ///
-/// STATS BASE diferentes do Knight:
-///   - maxHealth  +20  (tanque)
-///   - lightDamage -2  (menos dano bruto, mas se cura)
-///   - heavyDamage +4  (golpe divino mais forte)
-///   - staminaCostLight +5 (ataques sagrados custam mais stamina)
+/// INPUT:
+///   P = Ataque Leve (Attack1)
+///   U = Ataque Pesado / Golpe Divino (Attack2)
+///   I = Ataque Especial 2 (Attack3)
+///   R = Bênção Divina (restaura stamina, aplica bônus de defesa)
 ///
 /// SETUP NO UNITY:
-///   1. Crie um novo prefab Player_Paladin
-///   2. Adicione ESTE script (PaladinKnight) — NÃO o SoulslikeKnight
-///   3. Adicione PlayerStats, PlayerHitbox(es), Rigidbody2D, Animator
-///   4. No PlayerStats: mude currentClass para Paladin
-///   5. Configure o Animator Controller com o spritesheet do Paladino
-///      (mesmos trigger names: "attack", "special" — assim o PlayerCombat
-///       e os Animation Events funcionam sem mudança)
+///   1. Crie um GameObject "Player_Paladin" com este script
+///   2. Adicione Rigidbody2D, Animator, Collider2D(s) e tag "Player"
+///   3. Crie dois filhos com Box Collider 2D (Is Trigger = ON):
+///      - "HitboxSagrado" → adicione PaladinHitbox (isHeavy = false)
+///      - "HitboxDivino" → adicione PaladinHitbox (isHeavy = true)
+///   4. Crie um filho "GroundCheck" e arraste em groundCheckTransform
 /// </summary>
 public class PaladinKnight : PlayerBase {
 
-    // ------------------------------------------------------------------ //
-    //  Inspector — Ataque Sagrado (leve)
-    // ------------------------------------------------------------------ //
-    [Header("Ataque Sagrado (leve — tecla P)")]
-    [Tooltip("Percentual do dano causado que é devolvido como vida (0–1)")]
-    [SerializeField, Range(0f, 1f)] private float lifeStealRatio = 0.20f;
+    [Header("Bênção Divina (Habilidade R)")]
+    [SerializeField] private float blessingCooldown = 8f;
+    [SerializeField] private float blessingDefenseBonus = 0.6f;  // 60% redução de dano
+    [SerializeField] private float blessingDuration = 4f;
 
-    // ------------------------------------------------------------------ //
-    //  Inspector — Bênção Divina (tecla R)
-    // ------------------------------------------------------------------ //
-    [Header("Bênção Divina (tecla R)")]
-    [SerializeField] private float blessingCooldown = 12f;  // segundos entre usos
-    [SerializeField] private float blessingDuration = 5f;   // tempo com regen turbinado
-    [SerializeField] private float blessingRegenBonus = 40f;  // regen extra durante a bênção
-    [Tooltip("Efeito visual/sonoro opcional ao ativar a Bênção")]
-    [SerializeField] private GameObject blessingVFX;
-
-    // ── Estado da bênção ──────────────────────────────────────────────
     private float blessingCooldownTimer = 0f;
-    private bool blessingActive = false;
+    private bool isBlessingActive = false;
+    private float blessingEndTime = 0f;
 
-    // Evento para a UI saber do cooldown (opcional)
-    public event System.Action<float, float> OnBlessingCooldown; // (atual, max)
+    // Evento para a UI monitorar o cooldown da Bênção
+    public event System.Action<float, float> OnBlessingCooldownChanged;
+    public event System.Action<bool> OnBlessingActiveChanged;
 
+    // ================================================================== //
+    //  PROPRIEDADES PÚBLICAS
+    // ================================================================== //
+
+    public bool IsBlessingActive => isBlessingActive;
+    public float BlessingCooldownRemaining => Mathf.Max(0f, blessingCooldownTimer);
+
+    // ================================================================== //
+    //  UNITY CALLBACKS
+    // ================================================================== //
+
+    protected override void Awake() {
+        base.Awake();
+        // Inicializa sem bênção
+        isBlessingActive = false;
+        blessingCooldownTimer = 0f;
+    }
 
     protected override void Start() {
-        maxHealth += 20f;   
-        lightDamage -= 2f;  
-        heavyDamage += 4f;   
-        staminaCostLight += 5f;
-        base.Start();              
+        base.Start();
     }
 
     protected override void Update() {
-        base.Update();             // movimento, base input, regen
-
-        // Conta regressiva do cooldown da bênção
-        if (blessingCooldownTimer > 0f) {
-            blessingCooldownTimer -= Time.deltaTime;
-            OnBlessingCooldown?.Invoke(blessingCooldownTimer, blessingCooldown);
-        }
+        base.Update();
+        UpdateBlessingCooldown();
     }
 
     // ================================================================== //
-    //  INPUT DE COMBATE  (implementa o abstrato de PlayerBase)
+    //  INPUT DE COMBATE
     // ================================================================== //
 
     protected override void ReadCombatInput() {
         bool fatigued = playerStats != null && playerStats.isFatigued;
+        if (fatigued) return;
 
-        if (!fatigued) {
-            if (Input.GetKeyDown(KeyCode.P)) TryAttackLight();    // life steal aplicado no OnHolyHit
-            if (Input.GetKeyDown(KeyCode.U)) TryAttackSpecial1();
-            if (Input.GetKeyDown(KeyCode.I)) TryAttackSpecial2();
+        // Ataque Leve — Golpe Sagrado (dano normal + life steal)
+        if (Input.GetKeyDown(KeyCode.P)) {
+            TryAttackLight();
         }
 
-        // Bênção Divina — sem bloqueio por fadiga
-        if (Input.GetKeyDown(KeyCode.R) && blessingCooldownTimer <= 0f && !blessingActive)
-            StartCoroutine(BlessingRoutine());
-    }
-    // ================================================================== //
-    //  BÊNÇÃO DIVINA
-    // ================================================================== //
+        // Ataque Pesado — Golpe Divino (dano alto + explosão + stun)
+        if (Input.GetKeyDown(KeyCode.U)) {
+            TryAttackSpecial1();
+        }
 
-    private IEnumerator BlessingRoutine() {
-        blessingActive = true;
-        blessingCooldownTimer = blessingCooldown;
+        // Ataque Especial 2
+        if (Input.GetKeyDown(KeyCode.I)) {
+            TryAttackSpecial2();
+        }
 
-        // Ativa VFX
-        if (blessingVFX != null) blessingVFX.SetActive(true);
-
-        // Restaura stamina instantaneamente
-        RestoreStamina(maxStamina);
-
-        // Guarda regen original e aplica bônus
-        float originalRegen = staminaRegenRate;
-        staminaRegenRate += blessingRegenBonus;
-
-        Debug.Log($"[PaladinKnight] Bênção Divina ativa por {blessingDuration}s!");
-
-        yield return new WaitForSeconds(blessingDuration);
-
-        // Reverte regen
-        staminaRegenRate = originalRegen;
-        blessingActive = false;
-
-        if (blessingVFX != null) blessingVFX.SetActive(false);
-
-        Debug.Log("[PaladinKnight] Bênção Divina encerrada.");
+        // Habilidade R — Bênção Divina (restaura stamina + proteção temporária)
+        if (Input.GetKeyDown(KeyCode.R)) {
+            TryActivateBlessing();
+        }
     }
 
     // ================================================================== //
-    //  CALLBACK DE DANO CAUSADO — chamado pelo PlayerHitbox
-    //
-    //  O PlayerHitbox pode chamar este método via:
-    //      hit.GetComponentInParent<PaladinKnight>()?.OnHolyHit(damage);
-    //  OU adicione em PlayerHitbox uma chamada genérica ao PlayerBase.
+    //  BÊNÇÃO DIVINA (Habilidade R)
+    // ================================================================== //
+
+    private void TryActivateBlessing() {
+        // Verifica se está em cooldown
+        if (blessingCooldownTimer > 0f) {
+            Debug.Log($"[PaladinKnight] Bênção em cooldown! Tempo restante: {blessingCooldownTimer:F1}s");
+            return;
+        }
+
+        // Se já está ativa, não deixa ativar novamente
+        if (isBlessingActive) {
+            Debug.Log("[PaladinKnight] Bênção já está ativa!");
+            return;
+        }
+
+        // Ativa a bênção
+        ActivateBlessing();
+    }
+
+    private void ActivateBlessing() {
+        isBlessingActive = true;
+        blessingEndTime = Time.time + blessingDuration;
+        blessingCooldownTimer = blessingCooldown + blessingDuration;
+
+        // Restaura stamina completa
+        RestoreStamina(MaxStamina);
+
+        Debug.Log($"[PaladinKnight] Bênção Divina ativada! Stamina restaurada. Duração: {blessingDuration}s");
+
+        OnBlessingActiveChanged?.Invoke(true);
+        OnBlessingCooldownChanged?.Invoke(blessingCooldownTimer, blessingCooldown + blessingDuration);
+    }
+
+    private void UpdateBlessingCooldown() {
+        // Se a bênção está ativa, verifica se já passou a duração
+        if (isBlessingActive && Time.time >= blessingEndTime) {
+            isBlessingActive = false;
+            Debug.Log("[PaladinKnight] Bênção Divina expirou.");
+            OnBlessingActiveChanged?.Invoke(false);
+        }
+
+        // Decrementa o cooldown
+        if (blessingCooldownTimer > 0f) {
+            blessingCooldownTimer -= Time.deltaTime;
+            OnBlessingCooldownChanged?.Invoke(blessingCooldownTimer, blessingCooldown + blessingDuration);
+        }
+    }
+
+    // ================================================================== //
+    //  MODIFICADOR DE DANO (Proteção da Bênção)
+    // ================================================================== //
+
+    public override void TakeDamage(float amount) {
+        // Se a bênção está ativa, reduz o dano recebido
+        if (isBlessingActive) {
+            float reducedDamage = amount * (1f - blessingDefenseBonus);
+            Debug.Log($"[PaladinKnight] Bênção Divina ativa! Dano reduzido de {amount} para {reducedDamage}");
+            base.TakeDamage(reducedDamage);
+        }
+        else {
+            base.TakeDamage(amount);
+        }
+    }
+
+    // ================================================================== //
+    //  CALLBACK DE ROUBO DE VIDA (Ataque Leve)
     // ================================================================== //
 
     /// <summary>
-    /// Chamado após o Paladino causar dano num inimigo.
-    /// Devolve uma fração do dano como vida (life steal).
+    /// Chamado por PaladinHitbox quando um ataque sagrado acerta um inimigo.
+    /// Implementa o roubo de vida de 20% do dano causado.
     /// </summary>
     public void OnHolyHit(float damageDealt) {
-        float heal = damageDealt * lifeStealRatio;
+        float heal = damageDealt * 0.20f;
         if (heal > 0f) {
             RestoreHealth(heal);
-            Debug.Log($"[PaladinKnight] Life steal: +{heal:F1} HP");
+            Debug.Log($"[PaladinKnight] Roubo de Vida Sagrado: +{heal:F1} de HP");
         }
     }
 
     // ================================================================== //
-    //  GIZMOS
+    //  GETTERS DE DANO
     // ================================================================== //
 
-    protected override void OnDrawGizmosSelected() {
-        base.OnDrawGizmosSelected();
+    /// <summary>
+    /// Retorna o dano leve do Paladino.
+    /// Pode ser modificado pelo PlayerStats se necessário.
+    /// </summary>
+    public new float GetLightDamage() {
+        return lightDamage;
+    }
 
-        // Raio visual do cooldown da bênção
-        Gizmos.color = blessingCooldownTimer <= 0f ? Color.cyan : new Color(0f, 1f, 1f, 0.2f);
-        Gizmos.DrawWireSphere(transform.position, 0.6f);
+    /// <summary>
+    /// Retorna o dano pesado do Paladino.
+    /// Pode ser modificado pelo PlayerStats se necessário.
+    /// </summary>
+    public new float GetHeavyDamage() {
+        return heavyDamage;
     }
 }

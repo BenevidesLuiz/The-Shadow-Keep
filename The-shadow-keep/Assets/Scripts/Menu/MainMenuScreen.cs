@@ -36,21 +36,44 @@ public class MainMenuScreen : MonoBehaviour {
         if (btnExit != null) btnExit.onClick.AddListener(OnExitClick);
         if (btnFecharPainelLoad != null) btnFecharPainelLoad.onClick.AddListener(FecharPainelLoad);
     }
-    // NOVO JOGO
+
     private void OnNewGameClick() {
-        GameManager.Instance.GoToScene("EscolhaPersonagem", loadSave: false);
+        if (GameManager.Instance != null) {
+            GameManager.Instance.GoToScene("EscolhaPersonagem", loadSave: false);
+        }
+        else {
+            // Se ele não existir por falta de sincronia de milissegundos, nós procuramos ele na marra!
+            GameManager gm = Object.FindFirstObjectByType<GameManager>();
+
+            if (gm != null) {
+                // Achou! Força ele a virar a Instância e carrega a cena
+                gm.GoToScene("EscolhaPersonagem", loadSave: false);
+            }
+            else {
+                // Se mesmo assim não achar, o Unity vai te avisar no console exatamente o que houve
+                Debug.LogError("[Menu] Erro Crítico: O objeto do GameManager não está na cena do Menu!");
+            }
+        }
     }
 
-    // CONTINUAR: Lê o save automático e vai pra última fase
+    // CONTINUAR (Versão Segura)
     private void OnContinueClick() {
-      if (!SaveSystem.HasAnySave()) return;
+        if (!SaveSystem.HasAnySave()) return;
 
         PlayerData data = SaveSystem.LoadPlayer();
         string cenaSalva = (data != null && !string.IsNullOrEmpty(data.currentScene))
                            ? data.currentScene
                            : "Fase1";
 
-        GameManager.Instance.GoToScene(cenaSalva, loadSave: true);
+        if (GameManager.Instance != null) {
+            GameManager.Instance.GoToScene(cenaSalva, loadSave: true);
+        }
+        else {
+            GameManager gm = Object.FindFirstObjectByType<GameManager>();
+            if (gm != null) {
+                gm.GoToScene(cenaSalva, loadSave: true);
+            }
+        }
     }
 
     // CARREGAR JOGO: Abre a interface para escolher o Slot

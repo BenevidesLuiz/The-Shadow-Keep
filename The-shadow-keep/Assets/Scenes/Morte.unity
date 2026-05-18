@@ -154,7 +154,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
-  m_Volume: 1
+  m_Volume: 0.242
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -369,6 +369,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MorteScreen
   videoPlayer: {fileID: 1476486893}
+  tempoDeEspera: 10
 --- !u!1 &1482690479
 GameObject:
   m_ObjectHideFlags: 0

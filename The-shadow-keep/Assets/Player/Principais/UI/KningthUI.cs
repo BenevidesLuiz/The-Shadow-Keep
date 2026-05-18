@@ -2,16 +2,12 @@
 using UnityEngine.UI;
 
 /// <summary>
-/// KnightUI v3 — usa PlayerBase. Funciona com SoulslikeKnight E PaladinKnight.
-///
-/// NOVIDADE v3:
-///   - Campo knight trocado para PlayerBase
-///   - Cooldown da Bênção do Paladino (opcional) via referência direta
+/// KnightUI — Controla a exibição das barras de vida, stamina e mecânicas integradas.
 /// </summary>
 public class KnightUI : MonoBehaviour {
 
     [Header("Referência ao Personagem")]
-    [SerializeField] private PlayerBase knight;       
+    [SerializeField] private PlayerBase knight;
     [SerializeField] private PlayerStats playerStats;
 
     [Header("Barra de Vida")]
@@ -39,13 +35,10 @@ public class KnightUI : MonoBehaviour {
     [Header("Fadiga")]
     [SerializeField] private GameObject fatigueIndicator;
 
-    // ── Paladino (opcional) ────────────────────────────────────────────
-    [Header("Bênção Divina (apenas PaladinKnight — opcional)")]
-    [Tooltip("Barra de cooldown da Bênção. Deixe vazio se usar o Guerreiro.")]
+    [Header("Bênção Divina (apenas Paladino — opcional)")]
+    [Tooltip("Barra de cooldown da Bênção. Fica invisível se o jogador for Guerreiro puro.")]
     [SerializeField] private Image blessingCooldownFill;
-    private PaladinKnight paladin; // preenchido automaticamente se o player for um Paladino
 
-    // ==================================================================
     private void Start() {
         if (knight != null) {
             UpdateHealthBar(100, 100);
@@ -58,9 +51,13 @@ public class KnightUI : MonoBehaviour {
         if (fatigueIndicator != null) fatigueIndicator.SetActive(false);
         if (pendingSoulsIcon != null) pendingSoulsIcon.gameObject.SetActive(false);
 
-        // Tenta pegar referência ao Paladino (retorna null se for Knight)
-        if (knight != null) paladin = knight.GetComponent<PaladinKnight>();
-        if (blessingCooldownFill != null) blessingCooldownFill.fillAmount = 0f;
+        // Se o jogador não for mecanicamente um Paladino, esconde a barra de cooldown do 'R'
+        if (blessingCooldownFill != null) {
+            blessingCooldownFill.fillAmount = 0f;
+            if (playerStats != null && playerStats.currentClass != PlayerStats.CharacterClass.Paladin) {
+                blessingCooldownFill.gameObject.SetActive(false);
+            }
+        }
     }
 
     private void OnEnable() {
@@ -80,9 +77,6 @@ public class KnightUI : MonoBehaviour {
             playerStats.OnSharpnessChanged += UpdateBlade;
             playerStats.OnFatigueChanged += UpdateFatigue;
         }
-
-        if (paladin != null)
-            paladin.OnBlessingCooldown += UpdateBlessingCooldown;
     }
 
     private void OnDisable() {
@@ -102,9 +96,6 @@ public class KnightUI : MonoBehaviour {
             playerStats.OnSharpnessChanged -= UpdateBlade;
             playerStats.OnFatigueChanged -= UpdateFatigue;
         }
-
-        if (paladin != null)
-            paladin.OnBlessingCooldown -= UpdateBlessingCooldown;
     }
 
     // ==================================================================
@@ -152,11 +143,5 @@ public class KnightUI : MonoBehaviour {
 
     private void UpdateFatigue(bool fatigued) {
         if (fatigueIndicator != null) fatigueIndicator.SetActive(fatigued);
-    }
-
-    private void UpdateBlessingCooldown(float current, float max) {
-        if (blessingCooldownFill == null) return;
-        // Fill cheio = pronto para usar; vai esvaziando durante o cooldown
-        blessingCooldownFill.fillAmount = max > 0 ? 1f - (current / max) : 1f;
     }
 }

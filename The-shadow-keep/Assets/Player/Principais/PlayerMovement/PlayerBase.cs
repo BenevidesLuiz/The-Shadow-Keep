@@ -66,6 +66,12 @@ public abstract class PlayerBase : MonoBehaviour {
     [SerializeField] protected float maxHealth = 100f;
     protected float currentHealth;
 
+    // ====================================================================
+    // NOVA VARIÁVEL: Guarda o nome do jogador no personagem do mapa!
+    // ====================================================================
+    [HideInInspector] public string playerName;
+
+
     // ------------------------------------------------------------------ //
     //  Inspector — Stamina
     // ------------------------------------------------------------------ //
@@ -211,6 +217,44 @@ public abstract class PlayerBase : MonoBehaviour {
     }
 
     protected virtual void Start() {
+        // Se o jogo começou vindo do Menu de Criação (Novo Jogo)
+        if (GameManager.Instance != null && GameManager.Instance.pendingLoad != null && !GameManager.Instance.shouldLoad) {
+
+            // 1. Aplica o nome e os status base calculados pelo menu
+            this.playerName = GameManager.Instance.pendingLoad.playerName;
+            maxHealth = GameManager.Instance.pendingLoad.currentHealth;
+            maxStamina = GameManager.Instance.pendingLoad.currentStamina;
+
+            currentHealth = maxHealth;
+            currentStamina = maxStamina;
+            currentEstusCharges = maxEstusCharges;
+            currentState = State.Idle;
+
+            // 2. Transmite a classe e os atributos diretos para o componente PlayerStats do objeto
+            if (playerStats != null) {
+                playerStats.level = GameManager.Instance.pendingLoad.level;
+                playerStats.strength = GameManager.Instance.pendingLoad.strength;
+                playerStats.bladeSharpness = GameManager.Instance.pendingLoad.bladeSharpness;
+                playerStats.faith = GameManager.Instance.pendingLoad.faith;
+                playerStats.currentClass = GameManager.Instance.pendingLoad.characterClass;
+                playerStats.ApplyStatsToKnight();
+            }
+            
+            if (playerStats != null && playerStats.currentClass == PlayerStats.CharacterClass.Paladin) {
+                maxHealth += 20f;   // Bônus de vida de Tanque
+                currentHealth = maxHealth;
+                lightDamage -= 2f;  // Ajustes de balanceamento do Paladino
+                heavyDamage += 4f;
+                staminaCostLight += 5f;
+                Debug.Log($"[PlayerBase] {this.playerName} inicializado com modificadores matemáticos de Paladino!");
+            }
+
+            // 3. Cria o arquivo definitivo de save no computador (selando os dados)
+            SavePlayer();
+            return; // Impede que o bloco de testes abaixo sobrescreva os dados
+        }
+
+        // Inicialização padrão caso você dê Play direto pela Fase1 (Apenas para testes rápidos no editor)
         currentHealth = maxHealth;
         currentStamina = maxStamina;
         currentEstusCharges = maxEstusCharges;
@@ -238,25 +282,35 @@ public abstract class PlayerBase : MonoBehaviour {
         SaveSystem.SavePlayer(this, stats);
     }
 
-    
+
     public void LoadPlayer() {
-        PlayerData data = SaveSystem.LoadPlayer();  // ← Sem SaveGame.
+        PlayerData data = SaveSystem.LoadPlayer();
         if (data == null) return;
 
-        // PlayerBase
-        RestoreHealth(data.currentHealth - currentHealth);
+        // 1. Recupera o nome do personagem
+        this.playerName = data.playerName;
+
+        // 2. Define primeiro os limites máximos salvos
         maxHealth = data.maxHealth;
-        RestoreStamina(data.currentStamina - currentStamina);
         maxStamina = data.maxStamina;
+
+        // 3. Define os valores atuais com segurança
+        currentHealth = data.currentHealth;
+        currentStamina = data.currentStamina;
         currentEstusCharges = data.currentEstusCharges;
         maxEstusCharges = data.maxEstusCharges;
+
         SetLightDamage(data.lightDamage);
         SetHeavyDamage(data.heavyDamage);
 
-        // Posição
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        OnStaminaChanged?.Invoke(currentStamina, maxStamina);
+        OnEstusChanged?.Invoke(currentEstusCharges, maxEstusCharges);
+
+        // 4. Posição
         transform.position = new Vector3(data.position[0], data.position[1], 0f);
 
-        // PlayerStats
+        // 5. PlayerStats
         PlayerStats stats = GetComponent<PlayerStats>();
         if (stats != null) {
             stats.level = data.level;
@@ -267,10 +321,17 @@ public abstract class PlayerBase : MonoBehaviour {
             stats.ApplyStatsToKnight();
         }
 
-        // SoulManager
-        if (SoulManager.Instance != null)
+        // 6. SoulManager
+        if (SoulManager.Instance != null) {
+            // Limpa as almas antigas da sessão atual antes de aplicar o valor real do save
+            SoulManager.Instance.OnPlayerDied(Vector3.zero); // Zera o contador visual se necessário
             SoulManager.Instance.AddSouls(data.souls);
+        }
+
+        Debug.Log($"[PlayerBase] Save carregado com sucesso para: {this.playerName} (Nível {data.level})");
     }
+
+
     // ================================================================== //
     //  INPUT
     // ================================================================== //
@@ -368,6 +429,11 @@ public abstract class PlayerBase : MonoBehaviour {
     }
 
     protected void CheckIfGrounded() {
+        if (groundCheckTransform == null) {
+            Debug.LogError($"Falta arrastar o Ground Check Transform no script de {gameObject.name}!");
+            return; // Sai da função e evita o erro que trava o jogo
+        }
+
         isGrounded = Physics2D.OverlapCircle(groundCheckTransform.position, groundCheckRadius, groundLayer);
     }
 
@@ -540,8 +606,7 @@ public abstract class PlayerBase : MonoBehaviour {
     protected void ChangeState(State newState) => currentState = newState;
 
     protected virtual void UpdateAnimation() {
-        if (animator != null)
-        {
+        if (animator != null) {
             animator.SetFloat("run", Mathf.Abs(moveInput));
             Debug.Log("valor enviado ao animator: " + Mathf.Abs(moveInput));
         }

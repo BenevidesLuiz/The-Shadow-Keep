@@ -1,9 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-/// <summary>
-/// PlayerStats v4
-/// </summary>
 [RequireComponent(typeof(PlayerBase))]
 public class PlayerStats : MonoBehaviour {
     public enum CharacterClass { Warrior, Paladin }
@@ -23,63 +20,43 @@ public class PlayerStats : MonoBehaviour {
     [Range(0f, 100f)]
     public float bladeSharpness = 100f;
 
-    [SerializeField] private float sharpnessCostPerAttack = 5f;
+    [SerializeField] private float sharpnessCostPerAttack = 0.000000002f;
 
     [Header("Fadiga")]
     [Tooltip("Se verdadeiro, o knight fica temporariamente sem stamina")]
     public bool isFatigued = false;
     [SerializeField] private float fatigueDuration = 3f;
 
-    // ── Refs ─────────────────────────────────────────────────────────────
     private PlayerBase player;
-
-    // ── Valores base (antes de modificadores) ────────────────────────────
     private float baseLightDamage;
     private float baseHeavyDamage;
 
-    // 🔑 FLAG CRÍTICA: Se true, Start() NÃO reseta os valores
-    private bool statsAlreadyLoaded = false;
+    public bool statsAlreadyLoaded = false;
 
-    // ── Eventos ──────────────────────────────────────────────────────────
     public event System.Action<float> OnSharpnessChanged;
     public event System.Action<bool> OnFatigueChanged;
     public event System.Action<int> OnStrengthChanged;
     public event System.Action<int> OnLevelChanged;
 
-    // ── Propriedades ─────────────────────────────────────────────────────
     public float DamageMultiplier => CalculateDamageMultiplier();
     public float BladeSharpness => bladeSharpness;
     public int Level => level;
 
-    // ====================================================================
     private void Awake() {
         player = GetComponent<PlayerBase>();
-        Debug.Log("[PlayerStats] Awake() chamado");
+        baseLightDamage = player.GetLightDamage();
+        baseHeavyDamage = player.GetHeavyDamage();
     }
 
     private void Start() {
-        baseLightDamage = player.GetLightDamage();
-        baseHeavyDamage = player.GetHeavyDamage();
-
-        Debug.Log($"[PlayerStats] Start() chamado | statsAlreadyLoaded={statsAlreadyLoaded}");
-
-        // 🔑 CHAVE: Se os stats foram carregados do menu, NÃO reseta
         if (!statsAlreadyLoaded) {
-            Debug.Log("[PlayerStats] statsAlreadyLoaded = false → Configurando classe padrão");
             ConfigurarClasseInicial();
         }
         else {
-            Debug.Log($"[PlayerStats] statsAlreadyLoaded = true → Mantendo valores do menu!");
-            Debug.Log($"   Level: {level}");
-            Debug.Log($"   Força: {strength}");
-            Debug.Log($"   Fé: {faith}");
             ApplyStatsToKnight();
         }
     }
 
-    // ====================================================================
-    //  RECEBER DADOS DO MENU OU SAVE
-    // ====================================================================
     public void SetStatsFromMenuOrSave(
         CharacterClass newClass,
         int newLevel,
@@ -89,58 +66,36 @@ public class PlayerStats : MonoBehaviour {
         float newMaxStamina,
         int newFaith
     ) {
-        Debug.Log("[PlayerStats] SetStatsFromMenuOrSave() chamado");
-
         currentClass = newClass;
         level = newLevel;
         strength = newStrength;
         bladeSharpness = newSharpness;
         faith = newFaith;
-
-        Debug.Log($"   → Level: {level}");
-        Debug.Log($"   → Força: {strength}");
-        Debug.Log($"   → Fé: {faith}");
-        Debug.Log($"   → Afiação: {bladeSharpness}");
-
         player.SetCoreStatsFromMenu(newMaxHealth, newMaxStamina);
-
         statsAlreadyLoaded = true;
-
-        Debug.Log($"[PlayerStats] Stats do menu carregados com sucesso!");
     }
 
-    // ====================================================================
-    //  CONFIGURAÇÃO DE CLASSE PADRÃO (APENAS SE NÃO VEM DO MENU)
-    // ====================================================================
     private void ConfigurarClasseInicial() {
-        Debug.Log($"[PlayerStats] ConfigurarClasseInicial() chamado para {currentClass}");
-
         switch (currentClass) {
             case CharacterClass.Warrior:
                 level = 1;
                 strength = 12;
                 faith = 6;
-                Debug.Log("   → Warrior padrão: Force 12, Fé 6");
                 break;
             case CharacterClass.Paladin:
                 level = 1;
                 strength = 10;
                 faith = 14;
                 player.RestoreHealth(20f);
-                Debug.Log("   → Paladin padrão: Force 10, Fé 14");
                 break;
         }
         ApplyStatsToKnight();
     }
 
-    // ====================================================================
-    //  APLICAR STATS
-    // ====================================================================
     public void ApplyStatsToKnight() {
         float mult = CalculateDamageMultiplier();
         player.SetLightDamage(baseLightDamage * mult);
         player.SetHeavyDamage(baseHeavyDamage * mult);
-        Debug.Log($"[PlayerStats] Dano aplicado: Light={baseLightDamage * mult:F1} | Heavy={baseHeavyDamage * mult:F1}");
     }
 
     private float CalculateDamageMultiplier() {
@@ -150,22 +105,15 @@ public class PlayerStats : MonoBehaviour {
         return strengthMult * sharpnessMult * classMult;
     }
 
-    // ====================================================================
-    //  DESGASTE DA LÂMINA
-    // ====================================================================
     public void OnAttackPerformed() => WearBlade(sharpnessCostPerAttack);
 
     private void WearBlade(float amount) {
-        bladeSharpness = Mathf.Max(0f, bladeSharpness - amount);
+        float desgasteReal = amount / 20f;
+        bladeSharpness = Mathf.Max(0f, bladeSharpness - desgasteReal);
         OnSharpnessChanged?.Invoke(bladeSharpness);
         ApplyStatsToKnight();
-        if (bladeSharpness <= 0f)
-            Debug.Log("[PlayerStats] LÂMINA COMPLETAMENTE CEGA! Afie em um altar.");
     }
 
-    // ====================================================================
-    //  FADIGA
-    // ====================================================================
     public void TriggerFatigue() {
         if (!isFatigued) StartCoroutine(FatigueRoutine());
     }
@@ -173,16 +121,11 @@ public class PlayerStats : MonoBehaviour {
     private IEnumerator FatigueRoutine() {
         isFatigued = true;
         OnFatigueChanged?.Invoke(true);
-        Debug.Log("[PlayerStats] EXAUSTO!");
         yield return new WaitForSeconds(fatigueDuration);
         isFatigued = false;
         OnFatigueChanged?.Invoke(false);
-        Debug.Log("[PlayerStats] Recuperado da fadiga.");
     }
 
-    // ====================================================================
-    //  SACRIFÍCIO DE VIDA
-    // ====================================================================
     public void SacrificeLife() {
         float knightMaxHP = player.MaxHealth;
         int soulsGained = 0;
@@ -200,29 +143,19 @@ public class PlayerStats : MonoBehaviour {
             soulsGained = 500 + (currentClass == CharacterClass.Warrior ? 15 : 0);
         }
         else {
-            Debug.Log("[PlayerStats] Sacrifício não pode ser realizado — vida muito baixa.");
             return;
         }
 
         if (SoulManager.Instance != null)
             SoulManager.Instance.AddSouls(soulsGained);
-
-        Debug.Log($"[PlayerStats] Sacrifício → +{soulsGained} almas.");
     }
 
-    // ====================================================================
-    //  AFIAR LÂMINA
-    // ====================================================================
     public void SharpenBlade() {
         bladeSharpness = 100f;
         OnSharpnessChanged?.Invoke(bladeSharpness);
         ApplyStatsToKnight();
-        Debug.Log("[PlayerStats] Espada afiada!");
     }
 
-    // ====================================================================
-    //  UPGRADES COM ALMAS
-    // ====================================================================
     [Header("Custo de Upgrades")]
     [SerializeField] private int strengthUpgradeCost = 1000;
 
@@ -233,7 +166,6 @@ public class PlayerStats : MonoBehaviour {
         strength++;
         OnStrengthChanged?.Invoke(strength);
         ApplyStatsToKnight();
-        Debug.Log($"[PlayerStats] Força → {strength}! Custo: {strengthUpgradeCost} almas.");
         return true;
     }
 
@@ -243,7 +175,6 @@ public class PlayerStats : MonoBehaviour {
 
         level++;
         OnLevelChanged?.Invoke(level);
-        Debug.Log($"[PlayerStats] Level → {level}!");
         return true;
     }
 
@@ -251,12 +182,10 @@ public class PlayerStats : MonoBehaviour {
         PlayerBase pb = GetComponent<PlayerBase>();
         if (pb != null) {
             float novaVidaMax = CalcularHPDarkSouls(vitality);
-
             float novaStaminaMax = 50f;
             for (int i = 1; i <= stamina; i++) {
-                if (i <= 40) novaStaminaMax += 2.5f; // Ganha stamina até o 40
+                if (i <= 40) novaStaminaMax += 2.5f;
             }
-
             pb.SetCoreStatsFromMenu(novaVidaMax, novaStaminaMax);
         }
     }
@@ -267,7 +196,6 @@ public class PlayerStats : MonoBehaviour {
             if (i <= 15) {
                 hpBase += 15f;
             }
-
             else if (i <= 30) {
                 hpBase += 25f;
             }

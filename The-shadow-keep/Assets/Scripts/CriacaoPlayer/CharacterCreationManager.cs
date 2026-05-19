@@ -2,6 +2,13 @@
 using UnityEngine;
 using UnityEngine.UI;
 using static PlayerStats;
+
+/// <summary>
+/// CharacterCreationManager CORRIGIDO
+/// - Garante que shouldLoad é FALSE antes de criar novo personagem
+/// - Sincroniza melhor com GameManager
+/// - Validações mais robustas
+/// </summary>
 public class CharacterCreationManager : MonoBehaviour {
 
     [System.Serializable]
@@ -54,7 +61,7 @@ public class CharacterCreationManager : MonoBehaviour {
     [SerializeField] private Button acceptButton;
 
     [Header("Cor de Seleção")]
-    [SerializeField] private Color selectedColor = new Color(1f, 0.85f, 0f, 1f); // Dourado
+    [SerializeField] private Color selectedColor = new Color(1f, 0.85f, 0f, 1f);
     [SerializeField] private Color deselectedColor = Color.white;
 
     [Header("Painel de Confirmação")]
@@ -68,6 +75,12 @@ public class CharacterCreationManager : MonoBehaviour {
     private int selectedIndex = -1;
 
     private void Start() {
+        if (GameManager.Instance != null) {
+            GameManager.Instance.shouldLoad = false;
+            GameManager.Instance.pendingLoad = null;
+            Debug.Log("[CharacterCreationManager] Estado resetado ao entrar na tela de criação");
+        }
+
         // Configura botões de seleção de classe
         for (int i = 0; i < classSelectButtons.Length; i++) {
             int index = i;
@@ -75,37 +88,32 @@ public class CharacterCreationManager : MonoBehaviour {
         }
 
         if (acceptButton != null) acceptButton.onClick.AddListener(AbrirPainelAviso);
-
-        if (botaoSim != null) botaoSim.onClick.AddListener(ConfirmSelection); // O Sim  criação do player
-
+        if (botaoSim != null) botaoSim.onClick.AddListener(ConfirmSelection);
         if (botaoCancelar != null) botaoCancelar.onClick.AddListener(FecharPainelAviso);
 
         if (painelAviso != null) painelAviso.SetActive(false);
     }
 
-
-
     private void AbrirPainelAviso() {
-        // 1. Checa se o jogador selecionou uma classe
+        // Valida seleção de classe
         if (selectedIndex == -1) {
             MostrarErroNaTela("Por favor, selecione uma classe antes de continuar!");
             return;
         }
 
-        // 2. Checa de forma rigorosa se o componente existe E se o texto digitado é válido
+        // Valida nome do jogador
         if (inputNomeJogador == null) {
-            Debug.LogError("[CharacterCreationManager] ERRO: O campo 'inputNomeJogador' não foi arrastado no Inspector!");
-            MostrarErroNaTela("Erro técnico: Campo de nome não configurado no painel.");
+            Debug.LogError("[CharacterCreationManager] Campo 'inputNomeJogador' não configurado!");
+            MostrarErroNaTela("Erro técnico: Campo de nome não configurado.");
             return;
         }
 
-        // Valida se o jogador digitou apenas espaços ou deixou vazio
         if (string.IsNullOrWhiteSpace(inputNomeJogador.text)) {
             MostrarErroNaTela("O seu personagem precisa de um nome válido!");
             return;
         }
 
-        // Se passar em todas as validações, limpa mensagens de erro e abre o painel de confirmação
+        // Se tudo OK, abre painel de confirmação
         if (textoAvisoErro != null) textoAvisoErro.text = "";
         if (painelAviso != null) painelAviso.SetActive(true);
     }
@@ -113,16 +121,15 @@ public class CharacterCreationManager : MonoBehaviour {
     private void MostrarErroNaTela(string mensagem) {
         if (textoAvisoErro != null) {
             textoAvisoErro.text = mensagem;
-
             StopAllCoroutines();
             StartCoroutine(ApagarAvisoDepoisDeTempo());
         }
     }
 
     private System.Collections.IEnumerator ApagarAvisoDepoisDeTempo() {
-        yield return new WaitForSeconds(3f); // Espera 3 segundos
+        yield return new WaitForSeconds(3f);
         if (textoAvisoErro != null) {
-            textoAvisoErro.text = ""; // Apaga o texto
+            textoAvisoErro.text = "";
         }
     }
 
@@ -138,13 +145,11 @@ public class CharacterCreationManager : MonoBehaviour {
 
         Debug.Log($"[CharacterCreationManager] Selecionado: {c.className}");
 
-        // Atualiza nome e ícone
+        // Atualiza UI
         if (classNameDisplay) classNameDisplay.text = c.className;
         if (classIconDisplay && c.icon) classIconDisplay.sprite = c.icon;
-
         if (classDescriptionDisplay) classDescriptionDisplay.text = c.description;
 
-        // Atualiza todos os valores na UI (puxando do ClassPreset)
         if (levelValue) levelValue.text = c.level.ToString();
         if (strengthValue) strengthValue.text = c.strength.ToString();
         if (sharpnessValue) sharpnessValue.text = c.bladeSharpness.ToString("F0");
@@ -152,72 +157,65 @@ public class CharacterCreationManager : MonoBehaviour {
         if (staminaValue) staminaValue.text = c.stamina.ToString();
         if (faithValue) faithValue.text = c.faith.ToString();
 
+        // Atualiza cor dos botões
         for (int i = 0; i < classSelectButtons.Length; i++) {
             Image buttonImage = classSelectButtons[i].GetComponent<Image>();
             if (buttonImage != null) {
-                if (i == index) {
-                    buttonImage.color = selectedColor;
-                }
-                else {
-                    buttonImage.color = deselectedColor;
-                }
+                buttonImage.color = (i == index) ? selectedColor : deselectedColor;
             }
         }
     }
-
-    // ====================================================================
-    //  CONFIRMAÇÃO E CRIAÇÃO DO PLAYER (Versão sem Prefabs)
-    // ====================================================================
 
     private void ConfirmSelection() {
         ClassPreset selected = classes[selectedIndex];
 
         if (painelAviso != null) painelAviso.SetActive(false);
 
+        // Encontra um slot disponível
         int slotDisponivel = -1;
-
         for (int i = 1; i <= 3; i++) {
             if (!SaveSystem.HasSave(i)) {
-                slotDisponivel = i; // Encontrou o primeiro slot livre (1, 2 ou 3)
+                slotDisponivel = i;
                 break;
             }
         }
 
-        // Se todos os 3 slots estiverem cheios, avisa o jogador e não deixa prosseguir
         if (slotDisponivel == -1) {
-            MostrarErroNaTela("Todos os slots estão cheios! Exclua um save no menu anterior antes de começar.");
+            MostrarErroNaTela("Todos os slots estão cheios! Exclua um save antes de começar.");
             return;
         }
 
-        // Define o slot descoberto como o atual onde o jogo será gravado
         SaveSystem.CurrentSlot = slotDisponivel;
-        Debug.Log($"[CharacterCreationManager] Slot livre encontrado! Salvando automaticamente no Slot: {slotDisponivel}");
+        Debug.Log($"[CharacterCreationManager] Novo personagem salvo no Slot: {slotDisponivel}");
 
-        if (GameManager.Instance != null) {
-            if (GameManager.Instance.pendingLoad == null) {
-                GameManager.Instance.pendingLoad = new PlayerData();
+        GameManager gm = GameManager.Instance;
+        if (gm == null) {
+            gm = Object.FindFirstObjectByType<GameManager>();
+        }
+
+        if (gm != null) {
+            if (gm.pendingLoad == null) {
+                gm.pendingLoad = new PlayerData();
             }
 
-            // Atribui os dados do novo personagem
-            GameManager.Instance.pendingLoad.playerName = inputNomeJogador != null ? inputNomeJogador.text : "Recruta";
+            // Preenche dados do novo personagem
+            gm.pendingLoad.playerName = inputNomeJogador != null ? inputNomeJogador.text : "Recruta";
+            gm.pendingLoad.characterClass = selected.classType;
+            gm.pendingLoad.level = selected.level;
+            gm.pendingLoad.strength = selected.strength;
+            gm.pendingLoad.bladeSharpness = selected.bladeSharpness;
+            gm.pendingLoad.currentHealth = selected.GetMaxHealthFromVitality();
+            gm.pendingLoad.currentStamina = selected.GetMaxStaminaFromStamina();
+            gm.pendingLoad.faith = selected.faith;
 
-            if (selected.classType == PlayerStats.CharacterClass.Warrior) {
-                GameManager.Instance.pendingLoad.characterClass = CharacterClass.Warrior;
-            }
-            else {
-                GameManager.Instance.pendingLoad.characterClass = CharacterClass.Paladin;
-            }
+            gm.shouldLoad = false;
 
-            GameManager.Instance.pendingLoad.level = selected.level;
-            GameManager.Instance.pendingLoad.strength = selected.strength;
-            GameManager.Instance.pendingLoad.bladeSharpness = selected.bladeSharpness;
-            GameManager.Instance.pendingLoad.currentHealth = selected.GetMaxHealthFromVitality();
-            GameManager.Instance.pendingLoad.currentStamina = selected.GetMaxStaminaFromStamina();
-            GameManager.Instance.pendingLoad.faith = selected.faith;
-
-            // Inicia o jogo na Fase 1
-            GameManager.Instance.GoToScene("Fase1", loadSave: false);
+            Debug.Log($"[CharacterCreationManager] Iniciando novo jogo com {selected.className}");
+            gm.GoToScene("Fase1", loadSave: false);
+        }
+        else {
+            Debug.LogError("[CharacterCreationManager] GameManager não encontrado na cena!");
+            MostrarErroNaTela("Erro: GameManager não disponível.");
         }
     }
-
 }

@@ -3,6 +3,13 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// BonfireUI CORRIGIDO v2
+/// - Desabilita SCRIPTS do player (não só input)
+/// - Carrega dados do player corretamente
+/// - Sincroniza com InputManager
+/// - Habilita tudo ao fechar
+/// </summary>
 public class BonfireUI : MonoBehaviour {
 
     [Header("Telas da Fogueira")]
@@ -17,6 +24,8 @@ public class BonfireUI : MonoBehaviour {
     [Header("Referências do Jogador")]
     private PlayerStats playerStats;
     private PlayerBase playerBase;
+    private GameObject playerGameObject;
+    private MonoBehaviour[] playerScripts; // Para desabilitar todos os scripts
 
     [Header("Foto da Classe")]
     [SerializeField] private Image iconePlayer;
@@ -47,30 +56,86 @@ public class BonfireUI : MonoBehaviour {
     [SerializeField] private TextMeshProUGUI txtBotaoAceitar;
     [SerializeField] private TextMeshProUGUI txtBotaoVoltar;
 
-   private int tempLevel, tempForca, tempVit, tempEst, tempFe;
+    private int tempLevel, tempForca, tempVit, tempEst, tempFe;
     private float tempAfiacao;
     private int almasGastasTemporariamente;
 
-    private int cursorIndex = 0; // 0 a 6 (Menu principal)
+    private int cursorIndex = 0;
     private bool isConfirmacaoAberta = false;
-    private int confirmacaoIndex = 0; // 0 = OK, 1 = Cancelar
+    private int confirmacaoIndex = 0;
 
     private void OnEnable() {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null) {
-            playerStats = player.GetComponent<PlayerStats>();
-            playerBase = player.GetComponent<PlayerBase>();
+        Debug.Log("[BonfireUI] OnEnable chamado");
+
+        // ✅ PASSO 1: Encontra o player
+        playerGameObject = GameObject.FindGameObjectWithTag("Player");
+        if (playerGameObject == null) {
+            Debug.LogError("[BonfireUI] ERRO CRÍTICO: Player não encontrado com tag 'Player'!");
+            return;
+        }
+
+        // ✅ PASSO 2: Carrega os componentes
+        playerStats = playerGameObject.GetComponent<PlayerStats>();
+        playerBase = playerGameObject.GetComponent<PlayerBase>();
+
+        if (playerStats == null) {
+            Debug.LogError("[BonfireUI] ERRO: PlayerStats não encontrado no Player!");
+        }
+        if (playerBase == null) {
+            Debug.LogError("[BonfireUI] ERRO: PlayerBase não encontrado no Player!");
+        }
+
+        if (playerStats != null && playerBase != null) {
+            Debug.Log("[BonfireUI] Player carregado com sucesso!");
             ConfigurarFotoDaClasse();
         }
 
+        // ✅ PASSO 3: DESABILITA TODOS OS SCRIPTS DO PLAYER
+        // Isso impede que ele se mova, ataque, etc
+        playerScripts = playerGameObject.GetComponents<MonoBehaviour>();
+        foreach (MonoBehaviour script in playerScripts) {
+            // NÃO desabilita o PlayerStats (precisa dos dados)
+            if (!(script is PlayerStats)) {
+                script.enabled = false;
+                Debug.Log($"[BonfireUI] Desabilitado: {script.GetType().Name}");
+            }
+        }
+
+        // ✅ PASSO 4: Desabilita input do InputManager também
+        if (InputManager.Instance != null) {
+            InputManager.Instance.DisableInput("BonfireUI aberto");
+        }
+
+        // ✅ PASSO 5: Garante que as telas estão no estado correto
         if (telaOpcoes != null) telaOpcoes.SetActive(true);
         if (telaLevelUp != null) telaLevelUp.SetActive(false);
         if (painelConfirmacao != null) painelConfirmacao.SetActive(false);
 
         isConfirmacaoAberta = false;
+        cursorIndex = 0;
+    }
+
+    private void OnDisable() {
+        Debug.Log("[BonfireUI] OnDisable chamado - Reabilitando player");
+
+        // ✅ REABILITA TODOS OS SCRIPTS DO PLAYER
+        if (playerGameObject != null && playerScripts != null) {
+            foreach (MonoBehaviour script in playerScripts) {
+                if (script != null && !(script is PlayerStats)) {
+                    script.enabled = true;
+                    Debug.Log($"[BonfireUI] Reabilitado: {script.GetType().Name}");
+                }
+            }
+        }
+
+        // ✅ Habilita input do InputManager
+        if (InputManager.Instance != null) {
+            InputManager.Instance.EnableInput("BonfireUI fechado");
+        }
     }
 
     private void Update() {
+        if (playerStats == null) return;
         if (telaLevelUp == null || !telaLevelUp.activeSelf) return;
 
         if (isConfirmacaoAberta) {
@@ -85,10 +150,9 @@ public class BonfireUI : MonoBehaviour {
                 if (confirmacaoIndex == 0) ClicouEmOk();
                 else ClicouEmCancelarConfirmacao();
             }
-            return; 
+            return;
         }
 
-        
         if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)) {
             cursorIndex--;
             if (cursorIndex < 0) cursorIndex = 6;
@@ -112,6 +176,7 @@ public class BonfireUI : MonoBehaviour {
             else if (cursorIndex == 6) ClicouEmVoltarLevelUp();
         }
     }
+
     public void ClicouEmAceitarLevelUp() {
         if (almasGastasTemporariamente > 0) {
             isConfirmacaoAberta = true;
@@ -121,13 +186,17 @@ public class BonfireUI : MonoBehaviour {
         }
     }
 
-    
     public void ClicouEmVoltarLevelUp() {
         telaLevelUp.SetActive(false);
-        telaOpcoes.SetActive(true); 
+        telaOpcoes.SetActive(true);
     }
 
     public void ClicouEmOk() {
+        if (playerStats == null) {
+            Debug.LogError("[BonfireUI] PlayerStats é null em ClicouEmOk!");
+            return;
+        }
+
         if (SoulManager.Instance != null) {
             SoulManager.Instance.SpendSouls(almasGastasTemporariamente);
         }
@@ -144,18 +213,20 @@ public class BonfireUI : MonoBehaviour {
 
         if (playerBase != null) {
             SaveSystem.SavePlayer(playerBase, playerStats);
+            Debug.Log("[BonfireUI] Player salvo com sucesso!");
         }
 
-        ClicouEmCancelarConfirmacao(); 
+        ClicouEmCancelarConfirmacao();
         ResetarValoresTemporarios();
     }
 
     public void ClicouEmCancelarConfirmacao() {
         isConfirmacaoAberta = false;
         painelConfirmacao.SetActive(false);
-        AtualizarCoresDoCursor(); // Devolve a cor para o botão de trás
+        AtualizarCoresDoCursor();
     }
-private void AtualizarCoresConfirmacao() {
+
+    private void AtualizarCoresConfirmacao() {
         Color corSelecionado;
         ColorUtility.TryParseHtmlString("#6B3A2A", out corSelecionado);
 
@@ -186,7 +257,10 @@ private void AtualizarCoresConfirmacao() {
             txtBotaoVoltar.color = corSelecionado;
         }
     }
-     private void TentarSubirAtributo(int index) {
+
+    private void TentarSubirAtributo(int index) {
+        if (playerStats == null) return;
+
         int custoDesteLevel = CalcularCustoDoLevel(tempLevel);
         int almasDisponiveis = (SoulManager.Instance != null) ? SoulManager.Instance.CurrentSouls : 0;
 
@@ -205,6 +279,8 @@ private void AtualizarCoresConfirmacao() {
     }
 
     private void TentarDiminuirAtributo(int index) {
+        if (playerStats == null) return;
+
         bool temPontoPraDevolver = false;
 
         if (index == 0 && tempForca > playerStats.strength) { tempForca--; temPontoPraDevolver = true; }
@@ -241,14 +317,15 @@ private void AtualizarCoresConfirmacao() {
         AtualizarInterface();
     }
 
-   private int CalcularCustoDoLevel(int nivelAtual) {
+    private int CalcularCustoDoLevel(int nivelAtual) {
         float custoNivel1 = 300f;
         float aumentoPorLevel = 1.10f;
-        
         return Mathf.RoundToInt(custoNivel1 * Mathf.Pow(aumentoPorLevel, nivelAtual - 1));
     }
 
     private void AtualizarInterface() {
+        if (playerStats == null) return;
+
         int almasAtuais = (SoulManager.Instance != null) ? SoulManager.Instance.CurrentSouls : 0;
         int almasRestantes = almasAtuais - almasGastasTemporariamente;
         int custoDoProximoUP = CalcularCustoDoLevel(tempLevel);
@@ -302,15 +379,25 @@ private void AtualizarCoresConfirmacao() {
     }
 
     public void FecharFogueira() {
+        Debug.Log("[BonfireUI] Fechando fogueira");
+        // OnDisable será chamado automaticamente e reabilitará o player
         gameObject.SetActive(false);
     }
 
-
     public void VoltarParaMenuPrincipal() {
+        Debug.Log("[BonfireUI] Voltando para menu principal");
+
         if (playerBase != null && playerStats != null) {
             SaveSystem.SavePlayer(playerBase, playerStats);
+            Debug.Log("[BonfireUI] Player salvo antes de voltar ao menu");
         }
+
         Time.timeScale = 1f;
+
+        // ✅ Reseta input antes de ir para o menu
+        if (InputManager.Instance != null) {
+            InputManager.Instance.ResetInputState();
+        }
 
         if (GameManager.Instance != null) {
             GameManager.Instance.GoToScene("Menu");

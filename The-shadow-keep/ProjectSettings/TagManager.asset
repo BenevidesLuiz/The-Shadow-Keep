@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - Enemy
+  - CHAOTILE
   layers:
   - Default
   - TransparentFX
@@ -12,9 +13,9 @@ TagManager:
   - chao
   - Water
   - UI
+  - Enemy
   - 
-  - 
-  - 
+  - Player
   - 
   - 
   - 

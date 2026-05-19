@@ -56,7 +56,7 @@ public class MainMenuScreen : MonoBehaviour {
         }
     }
 
-    // CONTINUAR (Versão Segura)
+  
     private void OnContinueClick() {
         if (!SaveSystem.HasAnySave()) return;
 

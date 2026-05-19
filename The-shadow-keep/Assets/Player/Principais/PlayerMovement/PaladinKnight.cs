@@ -26,7 +26,7 @@ public class PaladinKnight : PlayerBase {
 
     [Header("Bênção Divina (Habilidade R)")]
     [SerializeField] private float blessingCooldown = 8f;
-    [SerializeField] private float blessingDefenseBonus = 0.6f;  // 60% redução de dano
+    [SerializeField] private float blessingDefenseBonus = 0.6f;  
     [SerializeField] private float blessingDuration = 4f;
 
     private float blessingCooldownTimer = 0f;

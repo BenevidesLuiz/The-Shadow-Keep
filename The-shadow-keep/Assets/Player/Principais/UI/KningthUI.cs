@@ -40,6 +40,8 @@ public class KnightUI : MonoBehaviour {
     [SerializeField] private Image blessingCooldownFill;
 
     private void Start() {
+        BuscarPlayerAutomaticamente();
+
         if (knight != null) {
             UpdateHealthBar(100, 100);
             UpdateStaminaBar(100, 100);
@@ -51,7 +53,6 @@ public class KnightUI : MonoBehaviour {
         if (fatigueIndicator != null) fatigueIndicator.SetActive(false);
         if (pendingSoulsIcon != null) pendingSoulsIcon.gameObject.SetActive(false);
 
-        // Se o jogador não for mecanicamente um Paladino, esconde a barra de cooldown do 'R'
         if (blessingCooldownFill != null) {
             blessingCooldownFill.fillAmount = 0f;
             if (playerStats != null && playerStats.currentClass != PlayerStats.CharacterClass.Paladin) {
@@ -60,6 +61,34 @@ public class KnightUI : MonoBehaviour {
         }
     }
 
+    private void Update() {
+        if (knight == null) {
+            BuscarPlayerAutomaticamente();
+        }
+    }
+
+    private void BuscarPlayerAutomaticamente() {
+        if (knight != null) return; 
+
+        PlayerBase playerNaCena = Object.FindFirstObjectByType<PlayerBase>();
+        if (playerNaCena != null) {
+            knight = playerNaCena;
+            playerStats = playerNaCena.GetComponent<PlayerStats>();
+
+            knight.OnHealthChanged += UpdateHealthBar;
+            knight.OnStaminaChanged += UpdateStaminaBar;
+            knight.OnEstusChanged += UpdateEstus;
+
+            if (playerStats != null) {
+                playerStats.OnSharpnessChanged += UpdateBlade;
+                playerStats.OnFatigueChanged += UpdateFatigue;
+            }
+
+            UpdateHealthBar(knight.CurrentHealth, knight.MaxHealth);
+            UpdateStaminaBar(knight.CurrentStamina, knight.MaxStamina);
+        }
+    }
+       
     private void OnEnable() {
         if (knight != null) {
             knight.OnHealthChanged += UpdateHealthBar;
@@ -98,10 +127,7 @@ public class KnightUI : MonoBehaviour {
         }
     }
 
-    // ==================================================================
-    //  UPDATES DE UI
-    // ==================================================================
-
+   
     private void UpdateHealthBar(float current, float max) {
         if (healthFill != null) healthFill.fillAmount = max > 0 ? current / max : 0f;
     }

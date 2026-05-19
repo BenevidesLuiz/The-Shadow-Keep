@@ -12,7 +12,6 @@ public class SoulslikeKnight : PlayerBase {
         base.Start();
     }
 
-    // CORRIGIDO: Usando 'protected override' para respeitar o método abstrato do PlayerBase
     protected override void ReadCombatInput() {
         bool fatigued = playerStats != null && playerStats.isFatigued;
         if (fatigued) return;

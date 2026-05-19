@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Bonfire v2 — Fogueira estilo Dark Souls.
-/// Agora integrada com a Tela de Level Up (PainelBonfire).
-/// Versão limpa: Sem animações.
+/// Bonfire v3 CORRIGIDO
+/// - Reseta estado quando sai da cena
+/// - Desabilita input do player quando painel abre
+/// - Sincroniza com InputManager
 /// </summary>
 public class Bonfire : MonoBehaviour {
     [Header("UI do Level Up")]
-    [SerializeField] private GameObject painelBonfire; 
+    [SerializeField] private GameObject painelBonfire;
 
     [Header("Interacao")]
     [SerializeField] private KeyCode interactKey = KeyCode.F;
@@ -22,12 +23,12 @@ public class Bonfire : MonoBehaviour {
     [SerializeField] private GameObject interactPrompt;
     [SerializeField] private float restDuration = 1.5f;
 
-    // ── Estado ────────────────────────────────────────────────────────
     private bool playerInRange = false;
     private bool isResting = false;
     private bool isLit = false;
 
     private static List<EnemySpawnData> registeredSpawns = new List<EnemySpawnData>();
+    private static List<EnemySpawner> registeredSpawners = new List<EnemySpawner>();
 
     private PlayerBase player;
     private Transform playerTransform;
@@ -35,16 +36,30 @@ public class Bonfire : MonoBehaviour {
     private static Vector3 lastCheckpoint;
     private static Bonfire activeCheckpoint;
 
-    // ==================================================================
+    private void OnEnable() {
+        // Se estamos voltando ao menu (shouldLoad = false e estamos na cena de menu)
+        if (GameManager.Instance != null && !GameManager.Instance.shouldLoad) {
+            ResetBonfireState();
+        }
+    }
+
     private void Start() {
         if (interactPrompt != null) interactPrompt.SetActive(false);
     }
 
     private void Update() {
-        // Se o painel de UI já estiver aberto, não faz nada
         if (painelBonfire != null && painelBonfire.activeSelf) {
             if (interactPrompt != null) interactPrompt.SetActive(false);
+
+            if (InputManager.Instance != null) {
+                InputManager.Instance.DisableInput("Painel Bonfire aberto");
+            }
+
             return;
+        }
+
+        if (InputManager.Instance != null && !InputManager.Instance.IsInputEnabled()) {
+            InputManager.Instance.EnableInput("Painel Bonfire fechado");
         }
 
         if (isResting) return;
@@ -75,7 +90,13 @@ public class Bonfire : MonoBehaviour {
         playerInRange = false;
 
         if (interactPrompt != null) interactPrompt.SetActive(false);
-        if (painelBonfire != null) painelBonfire.SetActive(false); 
+
+        if (painelBonfire != null && painelBonfire.activeSelf) {
+            painelBonfire.SetActive(false);
+            if (InputManager.Instance != null) {
+                InputManager.Instance.EnableInput("Player saiu do trigger da fogueira");
+            }
+        }
     }
 
     private IEnumerator RestAtBonfire() {
@@ -83,32 +104,32 @@ public class Bonfire : MonoBehaviour {
 
         if (!isLit) {
             isLit = true;
-            // A fogueira foi acesa pela primeira vez!
         }
 
         SetCheckpoint();
 
         if (interactPrompt != null) interactPrompt.SetActive(false);
 
-        // Espera o tempo de "descanso" (tela escura, fade, ou só uma pausa rápida)
+        if (InputManager.Instance != null) {
+            InputManager.Instance.DisableInput("Descansando na fogueira");
+        }
+
         yield return new WaitForSeconds(restDuration);
 
-        // 1. Cura total e recarrega os frascos (Estus)
+        // 1. Cura total e recarrega os frascos
         if (player != null) {
             player.RestoreHealth(99999f);
             player.RestoreStamina(99999f);
             player.RefillEstus();
-
-            // 2. Salva o jogo automaticamente no slot atual!
-            player.SavePlayer();
+            player.SavePlayer(); 
         }
 
-        // 3. Renasce os inimigos
+
         RespawnAllEnemies();
 
-        // 4. Abre a tela de Level Up
         if (painelBonfire != null) {
             painelBonfire.SetActive(true);
+            Debug.Log("[Bonfire] Painel de Level Up aberto. Input desabilitado.");
         }
 
         isResting = false;
@@ -131,17 +152,18 @@ public class Bonfire : MonoBehaviour {
         if (activeCheckpoint != null) activeCheckpoint.RespawnAllEnemies();
     }
 
-    // ── Respawn de inimigos ───────────────────────────────────────────
-
-    private static List<EnemySpawner> registeredSpawners = new List<EnemySpawner>();
-
+    
     public static void RegisterSpawner(EnemySpawner spawner) {
-        if (!registeredSpawners.Contains(spawner)) registeredSpawners.Add(spawner);
+        if (!registeredSpawners.Contains(spawner)) {
+            registeredSpawners.Add(spawner);
+        }
     }
 
     private void RespawnAllEnemies() {
         registeredSpawners.RemoveAll(s => s == null);
-        foreach (EnemySpawner spawner in registeredSpawners) spawner.ResetSpawner();
+        foreach (EnemySpawner spawner in registeredSpawners) {
+            spawner.ResetSpawner();
+        }
         Debug.Log($"[Bonfire] {registeredSpawners.Count} spawner(s) resetados.");
     }
 
@@ -149,7 +171,17 @@ public class Bonfire : MonoBehaviour {
         registeredSpawns.Add(new EnemySpawnData { prefab = prefab, spawnPosition = position });
     }
 
-    // ── Gizmos ────────────────────────────────────────────────────────
+    private void OnDestroy() {
+        ResetBonfireState();
+    }
+
+    private static void ResetBonfireState() {
+        lastCheckpoint = Vector3.zero;
+        activeCheckpoint = null;
+        registeredSpawns.Clear();
+        registeredSpawners.Clear();
+        Debug.Log("[Bonfire] Estado resetado ao sair da cena");
+    }
 
     private void OnDrawGizmosSelected() {
         Gizmos.color = new Color(1f, 0.4f, 0f, 0.4f);

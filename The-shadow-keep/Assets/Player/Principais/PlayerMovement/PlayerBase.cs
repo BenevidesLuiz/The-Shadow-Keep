@@ -7,28 +7,6 @@ using static PlayerStats;
 
 /// <summary>
 /// PlayerBase — Classe base abstrata para todos os personagens jogáveis.
-///
-/// CONTÉM (lógica comum a TODOS os personagens):
-///   - Vida, Stamina e regeneração
-///   - Movimento (andar, correr, pulo, roll)
-///   - Bloqueio
-///   - Sistema de Estus (cura)
-///   - Hurt e morte + respawn pela Bonfire
-///   - Setters/getters de dano (usados pelo PlayerStats)
-///   - Eventos OnHealthChanged, OnStaminaChanged, OnEstusChanged
-///
-/// NÃO CONTÉM (cada subclasse define):
-///   - Input de ataque e habilidades especiais  → TryAttackLight / TryAttackHeavy / TrySpecialAbility
-///   - Constantes de animação de ataque         → GetAttackAnimName / GetSpecialAnimName
-///
-/// SUBCLASSES:
-///   - SoulslikeKnight  : guerreiro, combo de espada
-///   - PaladinKnight    : paladino, golpe sagrado + bênção
-///
-/// SETUP NO UNITY:
-///   1. Coloque a subclasse no GameObject do Player (não este script diretamente)
-///   2. Adicione Rigidbody2D, Animator, Collider2D(s) e tag "Player"
-///   3. Crie um filho "GroundCheck" e arraste em groundCheckTransform
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 public abstract class PlayerBase : MonoBehaviour {
@@ -36,8 +14,10 @@ public abstract class PlayerBase : MonoBehaviour {
     // ------------------------------------------------------------------ //
     //  Estado interno
     // ------------------------------------------------------------------ //
-    protected enum State { Idle, Running, Jumping, Rolling, Blocking, Healing, Hurt, Dead }
+    public enum State { Idle, Running, Jumping, Rolling, Blocking, Healing, Hurt, Dead }
     protected State currentState = State.Idle;
+
+    public State CurrentPlayerState => currentState;
 
     protected Rigidbody2D rb2D;
     protected Animator animator;
@@ -55,9 +35,6 @@ public abstract class PlayerBase : MonoBehaviour {
     protected const string ANIM_ATTACK_SPECIAL1 = "Attack2";
     protected const string ANIM_ATTACK_SPECIAL2 = "Attack3";
 
-
-    //valor da varial não ta cetado aqui
-    //a dispocição de hierarquia ta ruim
 
     // ------------------------------------------------------------------ //
     //  Inspector — Vida
@@ -110,7 +87,7 @@ public abstract class PlayerBase : MonoBehaviour {
     [SerializeField] protected float jumpForce = 16f;
     [SerializeField] protected LayerMask groundLayer;
     [SerializeField] protected Transform groundCheckTransform;
-    [SerializeField] protected float groundCheckRadius = 0.2f;
+    [SerializeField] protected float groundCheckRadius = 0.4f;
     protected bool isGrounded;
 
     // ------------------------------------------------------------------ //
@@ -140,37 +117,71 @@ public abstract class PlayerBase : MonoBehaviour {
     [Header("Hurt")]
     [SerializeField] protected float hurtDuration = 0.6f;
 
+    // ------------------------------------------------------------------ //
+    //  Inspector — Objetos de Combate
+    // ------------------------------------------------------------------ //
+    [Header("Hitbox de Combate do Jogador")]
+    public GameObject hitboxArmaObjeto;
+
     protected void TryAttackLight() {
-        if (currentState == State.Dead || currentState == State.Blocking) return;
+        if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return;
         if (IsAttacking) return;
         if (currentStamina < staminaCostLight) return;
 
         ConsumeStamina(staminaCostLight);
         playerStats?.OnAttackPerformed();
+
         IsAttacking = true;
         animator.Play(ANIM_ATTACK_LIGHT);
+        StartCoroutine(ResetAttackRoutine());
     }
 
     protected void TryAttackSpecial1() {
-        if (currentState == State.Dead || currentState == State.Blocking) return;
+        if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return;
         if (IsAttacking) return;
         if (currentStamina < staminaCostHeavy) return;
 
         ConsumeStamina(staminaCostHeavy);
         playerStats?.OnAttackPerformed();
+
         IsAttacking = true;
         animator.Play(ANIM_ATTACK_SPECIAL1);
+        StartCoroutine(ResetAttackRoutine());
     }
 
     protected void TryAttackSpecial2() {
-        if (currentState == State.Dead || currentState == State.Blocking) return;
+        if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return;
         if (IsAttacking) return;
         if (currentStamina < staminaCostHeavy) return;
 
         ConsumeStamina(staminaCostHeavy);
         playerStats?.OnAttackPerformed();
+
         IsAttacking = true;
         animator.Play(ANIM_ATTACK_SPECIAL2);
+        StartCoroutine(ResetAttackRoutine());
+    }
+
+
+    private IEnumerator ResetAttackRoutine() {
+        yield return null;
+
+        float duration = 0.5f;
+        if (animator.GetCurrentAnimatorClipInfo(0).Length > 0) {
+            duration = animator.GetCurrentAnimatorStateInfo(0).length;
+        }
+
+        yield return new WaitForSeconds(duration);
+
+        IsAttacking = false;
+
+        // Garante que se o ataque acabar sem eventos de animação, a hitbox seja desligada por segurança
+        DesligarHitboxJogador();
+
+        if (currentState != State.Dead && currentState != State.Blocking && currentState != State.Rolling) {
+            ChangeState(State.Idle);
+            animator.Play(ANIM_IDLE);
+        }
     }
 
     // ------------------------------------------------------------------ //
@@ -189,16 +200,8 @@ public abstract class PlayerBase : MonoBehaviour {
     public int CurrentEstusCharges => currentEstusCharges;
     public int MaxEstusCharges => maxEstusCharges;
 
-    /// <summary>True enquanto a animação de cura (Estus) está tocando.</summary>
     public bool IsHealing => currentState == State.Healing;
-
-    /// <summary>True se o personagem é um SoulslikeKnight (Guerreiro).</summary>
     public bool IsWarrior => this is SoulslikeKnight;
-
-    /// <summary>
-    /// True enquanto uma animação de ataque está tocando.
-    /// Setado pela subclasse (ou pelo PlayerCombat via SendMessage).
-    /// </summary>
     public bool IsAttacking { get; protected set; }
 
     // Eventos
@@ -217,10 +220,10 @@ public abstract class PlayerBase : MonoBehaviour {
     }
 
     protected virtual void Start() {
-        // Se o jogo começou vindo do Menu de Criação (Novo Jogo)
-        if (GameManager.Instance != null && GameManager.Instance.pendingLoad != null && !GameManager.Instance.shouldLoad) {
+        // Desativa a hitbox por segurança no início do jogo via código
+        DesligarHitboxJogador();
 
-            // 1. Aplica o nome e os status base calculados pelo menu
+        if (GameManager.Instance != null && GameManager.Instance.pendingLoad != null && !GameManager.Instance.shouldLoad) {
             this.playerName = GameManager.Instance.pendingLoad.playerName;
             maxHealth = GameManager.Instance.pendingLoad.currentHealth;
             maxStamina = GameManager.Instance.pendingLoad.currentStamina;
@@ -230,7 +233,6 @@ public abstract class PlayerBase : MonoBehaviour {
             currentEstusCharges = maxEstusCharges;
             currentState = State.Idle;
 
-            // 2. Transmite a classe e os atributos diretos para o componente PlayerStats do objeto
             if (playerStats != null) {
                 playerStats.level = GameManager.Instance.pendingLoad.level;
                 playerStats.strength = GameManager.Instance.pendingLoad.strength;
@@ -239,22 +241,20 @@ public abstract class PlayerBase : MonoBehaviour {
                 playerStats.currentClass = GameManager.Instance.pendingLoad.characterClass;
                 playerStats.ApplyStatsToKnight();
             }
-            
+
             if (playerStats != null && playerStats.currentClass == PlayerStats.CharacterClass.Paladin) {
-                maxHealth += 20f;   // Bônus de vida de Tanque
+                maxHealth += 20f;
                 currentHealth = maxHealth;
-                lightDamage -= 2f;  // Ajustes de balanceamento do Paladino
+                lightDamage -= 2f;
                 heavyDamage += 4f;
                 staminaCostLight += 5f;
                 Debug.Log($"[PlayerBase] {this.playerName} inicializado com modificadores matemáticos de Paladino!");
             }
 
-            // 3. Cria o arquivo definitivo de save no computador (selando os dados)
             SavePlayer();
-            return; // Impede que o bloco de testes abaixo sobrescreva os dados
+            return;
         }
 
-        // Inicialização padrão caso você dê Play direto pela Fase1 (Apenas para testes rápidos no editor)
         currentHealth = maxHealth;
         currentStamina = maxStamina;
         currentEstusCharges = maxEstusCharges;
@@ -276,25 +276,18 @@ public abstract class PlayerBase : MonoBehaviour {
         ApplyMovement();
     }
 
-
     public void SavePlayer() {
         PlayerStats stats = GetComponent<PlayerStats>();
         SaveSystem.SavePlayer(this, stats);
     }
 
-
     public void LoadPlayer() {
         PlayerData data = SaveSystem.LoadPlayer();
         if (data == null) return;
 
-        // 1. Recupera o nome do personagem
         this.playerName = data.playerName;
-
-        // 2. Define primeiro os limites máximos salvos
         maxHealth = data.maxHealth;
         maxStamina = data.maxStamina;
-
-        // 3. Define os valores atuais com segurança
         currentHealth = data.currentHealth;
         currentStamina = data.currentStamina;
         currentEstusCharges = data.currentEstusCharges;
@@ -307,10 +300,8 @@ public abstract class PlayerBase : MonoBehaviour {
         OnStaminaChanged?.Invoke(currentStamina, maxStamina);
         OnEstusChanged?.Invoke(currentEstusCharges, maxEstusCharges);
 
-        // 4. Posição
         transform.position = new Vector3(data.position[0], data.position[1], 0f);
 
-        // 5. PlayerStats
         PlayerStats stats = GetComponent<PlayerStats>();
         if (stats != null) {
             stats.level = data.level;
@@ -321,22 +312,14 @@ public abstract class PlayerBase : MonoBehaviour {
             stats.ApplyStatsToKnight();
         }
 
-        // 6. SoulManager
         if (SoulManager.Instance != null) {
-            // Limpa as almas antigas da sessão atual antes de aplicar o valor real do save
-            SoulManager.Instance.OnPlayerDied(Vector3.zero); // Zera o contador visual se necessário
+            SoulManager.Instance.OnPlayerDied(Vector3.zero);
             SoulManager.Instance.AddSouls(data.souls);
         }
 
         Debug.Log($"[PlayerBase] Save carregado com sucesso para: {this.playerName} (Nível {data.level})");
     }
 
-
-    // ================================================================== //
-    //  INPUT
-    // ================================================================== //
-
-    /// <summary>Lê movimento, pulo, roll, bloqueio e cura — comum a todos.</summary>
     private void ReadBaseInput() {
         moveInput = 0f;
         if (Input.GetKey(KeyCode.A)) moveInput = -1f;
@@ -349,15 +332,7 @@ public abstract class PlayerBase : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.O)) TryHeal();
     }
 
-    /// <summary>
-    /// Leia input de ataque e habilidades da subclasse.
-    /// Implemente este método em SoulslikeKnight, PaladinKnight, etc.
-    /// </summary>
     protected abstract void ReadCombatInput();
-
-    // ================================================================== //
-    //  MOVIMENTO
-    // ================================================================== //
 
     protected virtual void ApplyMovement() {
         switch (currentState) {
@@ -381,8 +356,7 @@ public abstract class PlayerBase : MonoBehaviour {
         }
 
         if (moveInput != 0f) {
-            bool sprinting = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-                             && currentStamina > 0;
+            bool sprinting = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && currentStamina > 0;
             float speed = sprinting ? runSpeed : walkSpeed;
             if (IsAttacking) speed = walkSpeed * 0.3f;
 
@@ -396,10 +370,6 @@ public abstract class PlayerBase : MonoBehaviour {
         }
     }
 
-    // ================================================================== //
-    //  PULO
-    // ================================================================== //
-
     protected void TryJump() {
         if (!isGrounded) return;
         if (IsAttacking) return;
@@ -409,8 +379,7 @@ public abstract class PlayerBase : MonoBehaviour {
         StopAllCoroutines();
         ConsumeStamina(staminaCostJump);
 
-        bool isSprinting = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-                           && currentStamina > 0;
+        bool isSprinting = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && currentStamina > 0;
         float horizSpeed = 0f;
         if (moveInput != 0f && isSprinting) horizSpeed = moveInput * runSpeed;
         else if (moveInput != 0f) horizSpeed = moveInput * walkSpeed;
@@ -431,22 +400,18 @@ public abstract class PlayerBase : MonoBehaviour {
     protected void CheckIfGrounded() {
         if (groundCheckTransform == null) {
             Debug.LogError($"Falta arrastar o Ground Check Transform no script de {gameObject.name}!");
-            return; // Sai da função e evita o erro que trava o jogo
+            return;
         }
-
         isGrounded = Physics2D.OverlapCircle(groundCheckTransform.position, groundCheckRadius, groundLayer);
     }
 
-    // ================================================================== //
-    //  ROLL
-    // ================================================================== //
-
     protected void TryRoll() {
         if (currentState == State.Dead || currentState == State.Blocking ||
-            currentState == State.Hurt) return;
+            currentState == State.Hurt || currentState == State.Rolling) return;
         if (currentStamina < staminaCostRoll) return;
 
         StopAllCoroutines();
+        IsAttacking = false;
         ChangeState(State.Rolling);
         ConsumeStamina(staminaCostRoll);
 
@@ -463,10 +428,6 @@ public abstract class PlayerBase : MonoBehaviour {
             ChangeState(isGrounded ? State.Idle : State.Jumping);
     }
 
-    // ================================================================== //
-    //  BLOQUEIO
-    // ================================================================== //
-
     protected void TryBlock() {
         if (IsAttacking) return;
         if (currentState != State.Idle && currentState != State.Running) return;
@@ -474,10 +435,6 @@ public abstract class PlayerBase : MonoBehaviour {
     }
 
     protected void ExitBlocking() => ChangeState(State.Idle);
-
-    // ================================================================== //
-    //  CURA (Estus)
-    // ================================================================== //
 
     protected void TryHeal() {
         if (currentState != State.Idle && currentState != State.Running) return;
@@ -501,10 +458,6 @@ public abstract class PlayerBase : MonoBehaviour {
         currentEstusCharges = maxEstusCharges;
         OnEstusChanged?.Invoke(currentEstusCharges, maxEstusCharges);
     }
-
-    // ================================================================== //
-    //  DANO E MORTE
-    // ================================================================== //
 
     public virtual void TakeDamage(float amount) {
         if (currentState == State.Dead) return;
@@ -541,10 +494,7 @@ public abstract class PlayerBase : MonoBehaviour {
 
     private IEnumerator DeathAndRespawn() {
         yield return new WaitForSeconds(2f);
-
-        // Guarda em qual fase estava
         GameManager.Instance.currentScene = SceneManager.GetActiveScene().name;
-
         SavePlayer();
         GameManager.Instance.GoToSceneInstant("Morte");
     }
@@ -570,10 +520,6 @@ public abstract class PlayerBase : MonoBehaviour {
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
 
-    // ================================================================== //
-    //  STAMINA
-    // ================================================================== //
-
     protected void ConsumeStamina(float amount) {
         currentStamina = Mathf.Max(0f, currentStamina - amount);
         staminaRegenTimer = staminaRegenDelay;
@@ -590,82 +536,79 @@ public abstract class PlayerBase : MonoBehaviour {
         OnStaminaChanged?.Invoke(currentStamina, maxStamina);
     }
 
-    // ================================================================== //
-    //  SETTERS / GETTERS DE DANO  (usados pelo PlayerStats)
-    // ================================================================== //
-
     public void SetLightDamage(float v) => lightDamage = v;
     public void SetHeavyDamage(float v) => heavyDamage = v;
     public float GetLightDamage() => lightDamage;
     public float GetHeavyDamage() => heavyDamage;
 
-    // ================================================================== //
-    //  STATE MACHINE / ANIMAÇÃO
-    // ================================================================== //
-
     protected void ChangeState(State newState) => currentState = newState;
 
     protected virtual void UpdateAnimation() {
-        if (animator != null) {
-            animator.SetFloat("run", Mathf.Abs(moveInput));
-            Debug.Log("valor enviado ao animator: " + Mathf.Abs(moveInput));
-        }
+        if (animator == null) return;
+
         if (currentState == State.Rolling || IsAttacking) return;
 
-        if (currentState == State.Idle || currentState == State.Running) {
-            if (moveInput != 0f && isGrounded) ChangeState(State.Running);
-            else if (moveInput == 0f && isGrounded) ChangeState(State.Idle);
+        if (isGrounded) {
+            if (moveInput != 0f) {
+                if (currentState != State.Running) {
+                    ChangeState(State.Running);
+                    animator.Play(ANIM_RUN);
+                }
+                bool sprinting = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && currentStamina > 0;
+                animator.speed = sprinting ? 1.2f : 1f;
+            }
+            else {
+                if (currentState != State.Idle && currentState != State.Blocking && currentState != State.Healing && currentState != State.Hurt) {
+                    ChangeState(State.Idle);
+                    animator.Play(ANIM_IDLE);
+                    animator.speed = 1f;
+                }
+            }
         }
-
-        bool sprinting = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
-                         && currentStamina > 0;
-
-        switch (currentState) {
-            case State.Idle: animator.speed = 1f; break;
-            case State.Running: animator.speed = sprinting ? 1f : 0.7f; break;
-            case State.Blocking: animator.speed = 1f; animator.Play(ANIM_BLOCK); break;
-            default: animator.speed = 1f; break;
+        else {
+            if (currentState != State.Jumping && currentState != State.Hurt) {
+                ChangeState(State.Jumping);
+                animator.Play(ANIM_JUMP);
+            }
         }
     }
 
-    // ================================================================== //
-    //  RECEBER STATUS DO MENU DE CRIAÇÃO
-    // ================================================================== //
     public void SetCoreStatsFromMenu(float newMaxHealth, float newMaxStamina) {
         maxHealth = newMaxHealth;
         currentHealth = maxHealth;
         maxStamina = newMaxStamina;
         currentStamina = maxStamina;
 
-        // Atualiza as barras na tela, se houver
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
         OnStaminaChanged?.Invoke(currentStamina, maxStamina);
     }
-
-
-    // ================================================================== //
-    //  AUXILIARES
-    // ================================================================== //
 
     protected float GetFacingDirection() => transform.localScale.x >= 0 ? 1f : -1f;
 
     protected virtual void FlipSprite() {
         if (IsAttacking || currentState == State.Blocking || currentState == State.Dead) return;
-        float reference = (currentState == State.Jumping && moveInput != 0f)
-            ? moveInput
-            : rb2D.linearVelocity.x;
+        float reference = (currentState == State.Jumping && moveInput != 0f) ? moveInput : rb2D.linearVelocity.x;
         if (reference < -0.01f) transform.localScale = new Vector3(-1f, 1f, 1f);
         else if (reference > 0.01f) transform.localScale = new Vector3(1f, 1f, 1f);
     }
 
     // ================================================================== //
-    //  MENSAGENS DO PlayerCombat (via SendMessage)
+    //  MENSAGENS E EVENTOS DE ANIMAÇÃO (Lógica da Lâmina/Hitbox)
     // ================================================================== //
 
     public void SetAttacking(bool value) => IsAttacking = value;
     public void EndAttack() { IsAttacking = false; ChangeState(State.Idle); }
     public void ReEnableInput() { if (currentState != State.Dead && currentState != State.Blocking) ChangeState(State.Idle); }
     public void EndHeal() => ChangeState(State.Idle);
+
+    // Métodos chamados pelos Animation Events da Unity via código!
+    public void LigarHitboxJogador() {
+        if (hitboxArmaObjeto != null) hitboxArmaObjeto.SetActive(true);
+    }
+
+    public void DesligarHitboxJogador() {
+        if (hitboxArmaObjeto != null) hitboxArmaObjeto.SetActive(false);
+    }
 
     // Stubs de combo — mantidos para compatibilidade com Animation Events
     public void EnableCanContinueAttackCombo() { }
@@ -676,7 +619,6 @@ public abstract class PlayerBase : MonoBehaviour {
     // ================================================================== //
     //  GIZMOS
     // ================================================================== //
-
     protected virtual void OnDrawGizmosSelected() {
         if (groundCheckTransform == null) return;
         Gizmos.color = isGrounded ? Color.green : Color.red;

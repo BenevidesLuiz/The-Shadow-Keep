@@ -129,9 +129,10 @@ Transform:
   m_LocalScale: {x: 0.81665933, y: 0.9874, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1650719286694253619}
   - {fileID: 6360614309580180404}
   - {fileID: 3368713492093544519}
+  - {fileID: 1650719286694253619}
+  - {fileID: 8627857822092507665}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &2852211777183201786
@@ -203,7 +204,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 5eec1e6a044f28d48ad06968acbca1ae, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -252,7 +253,7 @@ Rigidbody2D:
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 1
-  m_LinearDamping: 2
+  m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_GravityScale: 1
   m_Material: {fileID: 0}
@@ -297,7 +298,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   groundCheckTransform: {fileID: 1650719286694253619}
-  groundCheckRadius: 0.2
+  groundCheckRadius: 0.4
   rollForce: 10
   rollDuration: 0.4
   staminaCostLight: 9
@@ -305,6 +306,7 @@ MonoBehaviour:
   lightDamage: 10
   heavyDamage: 16
   hurtDuration: 0.6
+  hitboxArmaObjeto: {fileID: 4603617684903556009}
 --- !u!95 &1092049409427168166
 Animator:
   serializedVersion: 7
@@ -349,7 +351,100 @@ MonoBehaviour:
   sharpnessCostPerAttack: 5
   isFatigued: 0
   fatigueDuration: 3
+  statsAlreadyLoaded: 0
   strengthUpgradeCost: 1000
+--- !u!1 &4603617684903556009
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8627857822092507665}
+  - component: {fileID: 2447661885476463730}
+  - component: {fileID: 3852361834002652586}
+  m_Layer: 8
+  m_Name: HitboxArm
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8627857822092507665
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4603617684903556009}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.948, y: -0.484, z: 0}
+  m_LocalScale: {x: 1.2245008, y: 1.0127608, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6280824838969294238}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2447661885476463730
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4603617684903556009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6a5a1272f0dc6f4b899fa3421beeb5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponHitbox
+  isHeavyAttack: 0
+--- !u!61 &3852361834002652586
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4603617684903556009}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
 --- !u!1 &5046743412292502318
 GameObject:
   m_ObjectHideFlags: 0

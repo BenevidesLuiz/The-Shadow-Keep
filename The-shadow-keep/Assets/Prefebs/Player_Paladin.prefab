@@ -125,8 +125,8 @@ Transform:
   m_GameObject: {fileID: 3625191659437056948}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.569, y: 0.044, z: 0}
-  m_LocalScale: {x: 1.5201027, y: 1.5919203, z: 1}
+  m_LocalPosition: {x: 1.6333, y: -0.1315, z: 0}
+  m_LocalScale: {x: 2.7025907, y: 2.4736974, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6360614309580180404}
@@ -311,6 +311,7 @@ MonoBehaviour:
   sharpnessCostPerAttack: 5
   isFatigued: 0
   fatigueDuration: 3
+  statsAlreadyLoaded: 0
   strengthUpgradeCost: 1000
 --- !u!114 &9223166765738864319
 MonoBehaviour:

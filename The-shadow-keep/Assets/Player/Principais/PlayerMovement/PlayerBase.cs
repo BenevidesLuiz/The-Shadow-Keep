@@ -36,22 +36,15 @@ public abstract class PlayerBase : MonoBehaviour {
     protected const string ANIM_ATTACK_SPECIAL2 = "Attack3";
 
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Vida
-    // ------------------------------------------------------------------ //
     [Header("Vida")]
     [SerializeField] protected float maxHealth = 100f;
     protected float currentHealth;
 
-    // ====================================================================
-    // NOVA VARIÁVEL: Guarda o nome do jogador no personagem do mapa!
-    // ====================================================================
     [HideInInspector] public string playerName;
 
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Stamina
-    // ------------------------------------------------------------------ //
     [Header("Stamina")]
     [SerializeField] protected float maxStamina = 100f;
     [SerializeField] protected float staminaRegenRate = 15f;
@@ -62,27 +55,21 @@ public abstract class PlayerBase : MonoBehaviour {
     protected float currentStamina;
     protected float staminaRegenTimer;
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Estus
-    // ------------------------------------------------------------------ //
     [Header("Estus / Poção (tecla O)")]
     [SerializeField] protected int maxEstusCharges = 5;
     [SerializeField] protected float estusHealAmount = 40f;
     [SerializeField] protected float estusDuration = 1.2f;
     protected int currentEstusCharges;
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Movimento
-    // ------------------------------------------------------------------ //
     [Header("Movimento")]
     [SerializeField] protected float walkSpeed = 4f;
     [SerializeField] protected float runSpeed = 8f;
     [SerializeField] protected float airControl = 0.7f;
     protected float moveInput;
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Pulo
-    // ------------------------------------------------------------------ //
     [Header("Pulo")]
     [SerializeField] protected float jumpForce = 16f;
     [SerializeField] protected LayerMask groundLayer;
@@ -90,43 +77,33 @@ public abstract class PlayerBase : MonoBehaviour {
     [SerializeField] protected float groundCheckRadius = 0.4f;
     protected bool isGrounded;
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Roll
-    // ------------------------------------------------------------------ //
     [Header("Roll")]
     [SerializeField] protected float rollForce = 11f;
     [SerializeField] protected float rollDuration = 0.45f;
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Custo de stamina nos ataques
-    // ------------------------------------------------------------------ //
     [Header("Custo de Stamina nos Ataques")]
     [SerializeField] protected float staminaCostLight = 12f;
     [SerializeField] protected float staminaCostHeavy = 30f;
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Dano base
-    // ------------------------------------------------------------------ //
     [Header("Dano")]
     [SerializeField] protected float lightDamage = 10f;
     [SerializeField] protected float heavyDamage = 16f;
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Hurt
-    // ------------------------------------------------------------------ //
     [Header("Hurt")]
     [SerializeField] protected float hurtDuration = 0.6f;
 
-    // ------------------------------------------------------------------ //
     //  Inspector — Objetos de Combate
-    // ------------------------------------------------------------------ //
     [Header("Hitbox de Combate do Jogador")]
     public GameObject hitboxArmaObjeto;
 
-    protected void TryAttackLight() {
-        if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return;
-        if (IsAttacking) return;
-        if (currentStamina < staminaCostLight) return;
+    protected bool TryAttackLight() {
+        if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return false;
+        if (IsAttacking) return false;
+        if (currentStamina < staminaCostLight) return false;
 
         ConsumeStamina(staminaCostLight);
         playerStats?.OnAttackPerformed();
@@ -134,12 +111,13 @@ public abstract class PlayerBase : MonoBehaviour {
         IsAttacking = true;
         animator.Play(ANIM_ATTACK_LIGHT);
         StartCoroutine(ResetAttackRoutine());
+        return true; // Retorna VERDADEIRO se o golpe saiu
     }
 
-    protected void TryAttackSpecial1() {
-        if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return;
-        if (IsAttacking) return;
-        if (currentStamina < staminaCostHeavy) return;
+    protected bool TryAttackSpecial1() {
+        if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return false;
+        if (IsAttacking) return false;
+        if (currentStamina < staminaCostHeavy) return false;
 
         ConsumeStamina(staminaCostHeavy);
         playerStats?.OnAttackPerformed();
@@ -147,12 +125,13 @@ public abstract class PlayerBase : MonoBehaviour {
         IsAttacking = true;
         animator.Play(ANIM_ATTACK_SPECIAL1);
         StartCoroutine(ResetAttackRoutine());
+        return true;
     }
 
-    protected void TryAttackSpecial2() {
-        if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return;
-        if (IsAttacking) return;
-        if (currentStamina < staminaCostHeavy) return;
+    protected bool TryAttackSpecial2() {
+        if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return false;
+        if (IsAttacking) return false;
+        if (currentStamina < staminaCostHeavy) return false;
 
         ConsumeStamina(staminaCostHeavy);
         playerStats?.OnAttackPerformed();
@@ -160,6 +139,7 @@ public abstract class PlayerBase : MonoBehaviour {
         IsAttacking = true;
         animator.Play(ANIM_ATTACK_SPECIAL2);
         StartCoroutine(ResetAttackRoutine());
+        return true;
     }
 
 
@@ -184,15 +164,11 @@ public abstract class PlayerBase : MonoBehaviour {
         }
     }
 
-    // ------------------------------------------------------------------ //
     //  Ref ao PlayerStats
-    // ------------------------------------------------------------------ //
     protected PlayerStats playerStats;
 
-    // ================================================================== //
     //  PROPRIEDADES PÚBLICAS
-    // ================================================================== //
-
+   
     public float MaxHealth => maxHealth;
     public float CurrentHealth => currentHealth;
     public float CurrentStamina => currentStamina;
@@ -209,10 +185,7 @@ public abstract class PlayerBase : MonoBehaviour {
     public event System.Action<float, float> OnStaminaChanged;
     public event System.Action<int, int> OnEstusChanged;
 
-    // ================================================================== //
-    //  UNITY CALLBACKS
-    // ================================================================== //
-
+    
     protected virtual void Awake() {
         rb2D = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
@@ -220,7 +193,6 @@ public abstract class PlayerBase : MonoBehaviour {
     }
 
     protected virtual void Start() {
-        // Desativa a hitbox por segurança no início do jogo via código
         DesligarHitboxJogador();
 
         if (GameManager.Instance != null && GameManager.Instance.pendingLoad != null && !GameManager.Instance.shouldLoad) {
@@ -592,16 +564,13 @@ public abstract class PlayerBase : MonoBehaviour {
         else if (reference > 0.01f) transform.localScale = new Vector3(1f, 1f, 1f);
     }
 
-    // ================================================================== //
     //  MENSAGENS E EVENTOS DE ANIMAÇÃO (Lógica da Lâmina/Hitbox)
-    // ================================================================== //
-
+  
     public void SetAttacking(bool value) => IsAttacking = value;
     public void EndAttack() { IsAttacking = false; ChangeState(State.Idle); }
     public void ReEnableInput() { if (currentState != State.Dead && currentState != State.Blocking) ChangeState(State.Idle); }
     public void EndHeal() => ChangeState(State.Idle);
 
-    // Métodos chamados pelos Animation Events da Unity via código!
     public void LigarHitboxJogador() {
         if (hitboxArmaObjeto != null) hitboxArmaObjeto.SetActive(true);
     }
@@ -610,7 +579,6 @@ public abstract class PlayerBase : MonoBehaviour {
         if (hitboxArmaObjeto != null) hitboxArmaObjeto.SetActive(false);
     }
 
-    // Stubs de combo — mantidos para compatibilidade com Animation Events
     public void EnableCanContinueAttackCombo() { }
     public void DisableCanContinueAttackCombo() { }
     public void EnableComboWindow() { }

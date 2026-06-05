@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections; 
 
 /// <summary>
 /// SoulslikeKnight — Motor de inputs do jogador na cena.
@@ -6,29 +7,53 @@
 /// </summary>
 public class SoulslikeKnight : PlayerBase {
 
-    // CORRIGIDO: Usando 'protected override' para respeitar a herança do PlayerBase
+    [Header("Referências de Hitbox")]
+    public GameObject hitboxArm; 
     protected override void Start() {
-        // Executa o fluxo de Novo Jogo / Carregamento da classe pai
         base.Start();
+        if (hitboxArm != null) hitboxArm.SetActive(false);
     }
 
     protected override void ReadCombatInput() {
         bool fatigued = playerStats != null && playerStats.isFatigued;
         if (fatigued) return;
 
-        // Inputs de ataque compartilhados
-        if (Input.GetKeyDown(KeyCode.P)) TryAttackLight();
-        if (Input.GetKeyDown(KeyCode.U)) TryAttackSpecial1();
-        if (Input.GetKeyDown(KeyCode.I)) TryAttackSpecial2();
+        if (Input.GetKeyDown(KeyCode.P)) {
+            if (TryAttackLight()) {
+                StartCoroutine(RotinaHitboxEspada(hitboxArm, 0.15f, 0.2f));
+            }
+        }
 
-        // Se o status do PlayerStats indicar que este guerreiro é mecanicamente um Paladino:
+        if (Input.GetKeyDown(KeyCode.U)) {
+            if (TryAttackSpecial1()) {
+                StartCoroutine(RotinaHitboxEspada(hitboxArm, 0.25f, 0.25f));
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.I)) {
+            if (TryAttackSpecial2()) {
+                StartCoroutine(RotinaHitboxEspada(hitboxArm, 0.25f, 0.25f));
+            }
+        }
+
         if (Input.GetKeyDown(KeyCode.R) && playerStats != null && playerStats.currentClass == PlayerStats.CharacterClass.Paladin) {
             RestoreStamina(MaxStamina);
             Debug.Log($"[Paladin-Skill] Bênção Divina executada! Stamina restaurada.");
         }
     }
 
-    // Callback de dano para roubo de vida (ativado se for mecanicamente Paladino)
+    private IEnumerator RotinaHitboxEspada(GameObject hitbox, float tempoEspera, float tempoAtiva) {
+        if (hitbox == null) yield break;
+
+        // Espera o tempo do frame da espadada chegar para a frente
+        yield return new WaitForSeconds(tempoEspera);
+        hitbox.SetActive(true);
+
+        // Tempo que o corte fica ativo dando dano
+        yield return new WaitForSeconds(tempoAtiva);
+        hitbox.SetActive(false);
+    }
+
     public void OnHolyHit(float damageDealt) {
         if (playerStats != null && playerStats.currentClass == PlayerStats.CharacterClass.Paladin) {
             float heal = damageDealt * 0.20f;

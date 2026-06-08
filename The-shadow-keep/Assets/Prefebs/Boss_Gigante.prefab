@@ -125,16 +125,28 @@ PrefabInstance:
       value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
+      propertyPath: velocidade
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
       propertyPath: musicaVitoria
       value: 
       objectReference: {fileID: 8300000, guid: ba07c3881253db446a888b45009c32ac, type: 3}
     - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
+      propertyPath: distanciaVisao
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
       propertyPath: distanciaAtaque
-      value: 1.4
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
+      propertyPath: tempoEntreAtaques
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5097976618423295197, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
       propertyPath: m_Mass
-      value: 150
+      value: 500
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

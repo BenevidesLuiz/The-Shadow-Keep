@@ -307,30 +307,38 @@ public abstract class PlayerBase : MonoBehaviour {
     protected abstract void ReadCombatInput();
 
     protected virtual void ApplyMovement() {
-        switch (currentState) {
-            case State.Rolling:
-                return;
-            case State.Blocking:
-            case State.Hurt:
-                rb2D.linearVelocity = new Vector2(0f, rb2D.linearVelocity.y);
-                return;
-            case State.Dead:
-                rb2D.linearVelocity = Vector2.zero;
-                return;
-            case State.Jumping:
-                if (moveInput != 0f) {
-                    bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-                    float airTarget = moveInput * (shiftHeld ? runSpeed : walkSpeed);
-                    float newX = Mathf.Lerp(rb2D.linearVelocity.x, airTarget, airControl * 6f * Time.fixedDeltaTime);
-                    rb2D.linearVelocity = new Vector2(newX, rb2D.linearVelocity.y);
-                }
-                return;
+       
+        if (currentState == State.Dead || currentState == State.Hurt) {
+            rb2D.linearVelocity = new Vector2(0f, rb2D.linearVelocity.y);
+            return;
         }
 
+        if (currentState == State.Rolling) {
+            return;
+        }
+
+        if (currentState == State.Blocking) {
+            float blockSpeed = walkSpeed * 0.5f; // Corta a velocidade pela metade
+            rb2D.linearVelocity = new Vector2(moveInput * blockSpeed, rb2D.linearVelocity.y);
+            return; 
+        }
+
+        if (currentState == State.Jumping) {
+            if (moveInput != 0f) {
+                bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                float airTarget = moveInput * (shiftHeld ? runSpeed : walkSpeed);
+                float newX = Mathf.Lerp(rb2D.linearVelocity.x, airTarget, airControl * 6f * Time.fixedDeltaTime);
+                rb2D.linearVelocity = new Vector2(newX, rb2D.linearVelocity.y);
+            }
+            return;
+        }
+
+        // 5. Movimento Livre no Chão (Idle / Run)
         if (moveInput != 0f) {
             bool sprinting = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && currentStamina > 0;
             float speed = sprinting ? runSpeed : walkSpeed;
-            if (IsAttacking) speed = walkSpeed * 0.3f;
+
+            if (IsAttacking) speed = walkSpeed * 0.3f; // Anda arrastado se bater andando
 
             rb2D.linearVelocity = new Vector2(moveInput * speed, rb2D.linearVelocity.y);
 
@@ -395,18 +403,39 @@ public abstract class PlayerBase : MonoBehaviour {
     private IEnumerator RollRoutine() {
         animator.Play(ANIM_ROLL);
         yield return new WaitForSeconds(rollDuration);
-        if (isGrounded) rb2D.linearVelocity = new Vector2(0f, rb2D.linearVelocity.y);
-        if (currentState == State.Rolling)
-            ChangeState(isGrounded ? State.Idle : State.Jumping);
+
+        if (currentState == State.Rolling) {
+            if (isGrounded) {
+                rb2D.linearVelocity = new Vector2(0f, rb2D.linearVelocity.y);
+
+                if (moveInput != 0f) {
+                    ChangeState(State.Running);
+                    animator.Play(ANIM_RUN);
+                }
+                else {
+                    ChangeState(State.Idle);
+                    animator.Play(ANIM_IDLE);
+                }
+            }
+            else {
+                ChangeState(State.Jumping);
+                animator.Play(ANIM_JUMP);
+            }
+        }
     }
 
     protected void TryBlock() {
         if (IsAttacking) return;
         if (currentState != State.Idle && currentState != State.Running) return;
+
         ChangeState(State.Blocking);
+        animator.Play(ANIM_BLOCK);
     }
 
-    protected void ExitBlocking() => ChangeState(State.Idle);
+    protected void ExitBlocking() {
+        ChangeState(State.Idle);
+        animator.Play(ANIM_IDLE); 
+    }
 
     protected void TryHeal() {
         if (currentState != State.Idle && currentState != State.Running) return;
@@ -433,12 +462,25 @@ public abstract class PlayerBase : MonoBehaviour {
 
     public virtual void TakeDamage(float amount) {
         if (currentState == State.Dead) return;
-        if (currentState == State.Blocking) amount *= 0.2f;
+
+        if (currentState == State.Blocking) {
+            amount *= 0.2f; 
+
+            currentHealth = Mathf.Max(0f, currentHealth - amount);
+            OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+            if (currentHealth <= 0f) { Die(); }
+
+            return; 
+        }
 
         currentHealth = Mathf.Max(0f, currentHealth - amount);
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
 
         if (currentHealth <= 0f) { Die(); return; }
+
+        IsAttacking = false;
+        DesligarHitboxJogador();
 
         StopAllCoroutines();
         ChangeState(State.Hurt);
@@ -448,8 +490,13 @@ public abstract class PlayerBase : MonoBehaviour {
     private IEnumerator HurtRoutine() {
         animator.Play(ANIM_HURT);
         rb2D.linearVelocity = new Vector2(0f, rb2D.linearVelocity.y);
+
         yield return new WaitForSeconds(hurtDuration);
-        if (currentState == State.Hurt) ChangeState(State.Idle);
+
+        if (currentState == State.Hurt) {
+            ChangeState(State.Idle);
+            animator.Play(ANIM_IDLE); 
+        }
     }
 
     protected virtual void Die() {
@@ -518,7 +565,11 @@ public abstract class PlayerBase : MonoBehaviour {
     protected virtual void UpdateAnimation() {
         if (animator == null) return;
 
-        if (currentState == State.Rolling || IsAttacking) return;
+        if (currentState == State.Rolling || currentState == State.Blocking ||
+            currentState == State.Healing || currentState == State.Hurt ||
+            currentState == State.Dead || IsAttacking) {
+            return;
+        }
 
         if (isGrounded) {
             if (moveInput != 0f) {
@@ -530,7 +581,7 @@ public abstract class PlayerBase : MonoBehaviour {
                 animator.speed = sprinting ? 1.2f : 1f;
             }
             else {
-                if (currentState != State.Idle && currentState != State.Blocking && currentState != State.Healing && currentState != State.Hurt) {
+                if (currentState != State.Idle) {
                     ChangeState(State.Idle);
                     animator.Play(ANIM_IDLE);
                     animator.speed = 1f;
@@ -538,13 +589,13 @@ public abstract class PlayerBase : MonoBehaviour {
             }
         }
         else {
-            if (currentState != State.Jumping && currentState != State.Hurt) {
+            if (currentState != State.Jumping) {
                 ChangeState(State.Jumping);
                 animator.Play(ANIM_JUMP);
+                animator.speed = 1f;
             }
         }
     }
-
     public void SetCoreStatsFromMenu(float newMaxHealth, float newMaxStamina) {
         maxHealth = newMaxHealth;
         currentHealth = maxHealth;

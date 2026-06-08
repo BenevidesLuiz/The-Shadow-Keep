@@ -3,51 +3,57 @@
 /// <summary>
 /// SoulManager — Gerenciador central de Almas (moeda do jogo, estilo Dark Souls).
 ///
-/// COMO USAR:
-///   - Adicione este script num GameObject vazio "GameManager" na cena
-///   - Acesse via SoulManager.Instance de qualquer lugar
-///   - Inimigos chamam SoulManager.Instance.AddSouls(amount) ao morrer
-///   - Player perde almas ao morrer (ficam no chão para recuperar)
 ///
 /// EVENTOS DISPONÍVEIS:
 ///   OnSoulsChanged(int atual)  — sempre que o valor muda
 ///   OnSoulsLost(int perdidos, Vector3 pos) — ao morrer, para spawnar orbe
 /// </summary>
 public class SoulManager : MonoBehaviour {
-    // ── Singleton ─────────────────────────────────────────────────────────
-    public static SoulManager Instance { get; private set; }
+
+    private static SoulManager _instance;
+    public static SoulManager Instance {
+        get {
+   
+            if (_instance == null) {
+                _instance = Object.FindFirstObjectByType<SoulManager>();
+
+                if (_instance == null) {
+                    GameObject go = new GameObject("SoulManager_AutoTeste");
+                    _instance = go.AddComponent<SoulManager>();
+                    DontDestroyOnLoad(go);
+                    Debug.LogWarning("⚠️ [SoulManager] Gerenciador de Almas criado automaticamente para o Modo de Teste!");
+                }
+            }
+            return _instance;
+        }
+    }
 
     // ── Estado ────────────────────────────────────────────────────────────
     [Header("Almas")]
     [SerializeField] private int startingSouls = 0;
     private int currentSouls;
 
-    // Almas perdidas na última morte (para o orbe de recuperação)
     private int pendingRecoverySouls = 0;
     private Vector3 deathPosition;
     private bool hasPendingRecovery = false;
 
-    // ── Eventos ──────────────────────────────────────────────────────────
     public event System.Action<int> OnSoulsChanged;
-    public event System.Action<int, Vector3> OnSoulsLost; // (quantidade, posição de morte)
+    public event System.Action<int, Vector3> OnSoulsLost;
     public event System.Action<int> OnSoulsRecovered;
 
-    // ── Propriedades públicas ─────────────────────────────────────────────
     public int CurrentSouls => currentSouls;
     public bool HasPendingRecovery => hasPendingRecovery;
     public int PendingRecoverySouls => pendingRecoverySouls;
 
-    // ====================================================================
     private void Awake() {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
-        Instance = this;
+        if (_instance != null && _instance != this) {
+            Destroy(gameObject);
+            return;
+        }
+        _instance = this;
         DontDestroyOnLoad(gameObject);
         currentSouls = startingSouls;
     }
-
-    // ====================================================================
-    //  GANHAR ALMAS
-    // ====================================================================
 
     /// <summary>
     /// Adiciona almas ao jogador (chamado quando inimigo morre).

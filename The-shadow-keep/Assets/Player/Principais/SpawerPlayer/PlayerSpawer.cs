@@ -9,7 +9,18 @@ public class PlayerSpawner : MonoBehaviour {
     [Header("Posição de Spawn Padrão (Novo Jogo)")]
     [SerializeField] private Vector3 spawnPosition = Vector3.zero;
 
+    [Header("Modo de Teste Direto na Cena")]
+    [Tooltip("Se ativado, cria um player automaticamente caso você dê Play direto nesta fase.")]
+    [SerializeField] private bool modoTeste = true;
+    [SerializeField] private PlayerStats.CharacterClass classeParaTeste = PlayerStats.CharacterClass.Warrior;
+
     private void Start() {
+
+        if (modoTeste && (GameManager.Instance == null || (!GameManager.Instance.shouldLoad && GameManager.Instance.pendingLoad == null))) {
+            SpawnPlayerForTesting();
+            return;
+        }
+
         if (GameManager.Instance == null) return;
 
         if (GameManager.Instance.shouldLoad) {
@@ -47,6 +58,28 @@ public class PlayerSpawner : MonoBehaviour {
         }
 
         Debug.Log($"[PlayerSpawner] NOVO JOGO: Player {characterClass} criado e configurado com sucesso!");
+    }
+
+    private void SpawnPlayerForTesting() {
+        Debug.LogWarning($"[PlayerSpawner] MODO DE TESTE ATIVADO: Criando um {classeParaTeste} para testes locais!");
+
+        GameObject playerInstance = InstanciarPrefab(classeParaTeste, transform.position);
+
+        if (playerInstance != null) {
+            PlayerBase baseScript = playerInstance.GetComponent<PlayerBase>();
+            PlayerStats statsScript = playerInstance.GetComponent<PlayerStats>();
+
+            if (baseScript != null) {
+                baseScript.playerName = "Testador Local";
+                baseScript.SetCoreStatsFromMenu(100f, 100f);
+            }
+
+            if (statsScript != null) {
+                statsScript.level = 99;
+                statsScript.currentClass = classeParaTeste;
+                statsScript.ApplyStatsToKnight();
+            }
+        }
     }
 
     private void SpawnPlayerForLoadGame() {

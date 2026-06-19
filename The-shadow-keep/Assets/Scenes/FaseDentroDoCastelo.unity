@@ -5314,6 +5314,55 @@ Tilemap:
     e31: 0
     e32: 0
     e33: 1
+--- !u!1 &400278072
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 400278073}
+  - component: {fileID: 400278074}
+  m_Layer: 0
+  m_Name: PlayerSpawer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &400278073
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400278072}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -10.59, y: -2.21, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &400278074
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400278072}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09fe7f869c04d3a4d853cd5d24eff565, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerSpawner
+  warriorPrefab: {fileID: 3625191659437056948, guid: 57cd6c73119a53e48ba75ffe0dfc0c61, type: 3}
+  paladinPrefab: {fileID: 3625191659437056948, guid: c960147eed57e084783163c13b75cdbc, type: 3}
+  spawnPosition: {x: 0, y: 0, z: 0}
+  modoTeste: 1
+  classeParaTeste: 0
 --- !u!1 &455517899
 GameObject:
   m_ObjectHideFlags: 0
@@ -5695,7 +5744,6 @@ Transform:
   - {fileID: 455517900}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &719324080
 --- !u!1 &621394046
 GameObject:
   m_ObjectHideFlags: 0
@@ -17376,3 +17424,4 @@ SceneRoots:
   - {fileID: 610152810}
   - {fileID: 684546183}
   - {fileID: 1039353002}
+  - {fileID: 400278073}

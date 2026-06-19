@@ -3,7 +3,6 @@
 /// <summary>
 /// SoulManager — Gerenciador central de Almas (moeda do jogo, estilo Dark Souls).
 ///
-///
 /// EVENTOS DISPONÍVEIS:
 ///   OnSoulsChanged(int atual)  — sempre que o valor muda
 ///   OnSoulsLost(int perdidos, Vector3 pos) — ao morrer, para spawnar orbe
@@ -11,9 +10,17 @@
 public class SoulManager : MonoBehaviour {
 
     private static SoulManager _instance;
+
+    // Trava de segurança para impedir a recriação do objeto ao fechar a cena
+    private static bool applicationIsQuitting = false;
+
     public static SoulManager Instance {
         get {
-   
+            // Se o jogo estiver fechando, aborta a criação
+            if (applicationIsQuitting) {
+                return null;
+            }
+
             if (_instance == null) {
                 _instance = Object.FindFirstObjectByType<SoulManager>();
 
@@ -132,5 +139,21 @@ public class SoulManager : MonoBehaviour {
         pendingRecoverySouls = 0;
         hasPendingRecovery = false;
         Debug.Log("[SoulManager] Almas pendentes perdidas para sempre.");
+    }
+
+    // ====================================================================
+    //  PREVENÇÃO DE ERROS DA UNITY AO FECHAR O JOGO/CENA
+    // ====================================================================
+
+    private void OnApplicationQuit() {
+        applicationIsQuitting = true;
+    }
+
+    private void OnDestroy() {
+        // Só marcamos que o app está fechando se este for o Singleton verdadeiro
+        // Isso evita bugs caso uma cópia duplicada seja destruída no Awake
+        if (_instance == this) {
+            applicationIsQuitting = true;
+        }
     }
 }

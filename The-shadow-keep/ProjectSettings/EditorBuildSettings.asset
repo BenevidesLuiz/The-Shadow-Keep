@@ -18,6 +18,9 @@ EditorBuildSettings:
     path: Assets/Scenes/Fase1.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
   - enabled: 1
+    path: Assets/Scenes/FaseDentroDoCastelo.unity
+    guid: dfa353778c0df15499c1a13b29a79ae4
+  - enabled: 1
     path: Assets/Scenes/Morte.unity
     guid: 7b5be8018bf885049a7e4e5c2d3900fc
   m_configObjects:

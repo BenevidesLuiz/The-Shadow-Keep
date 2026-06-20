@@ -92,6 +92,11 @@ public abstract class PlayerBase : MonoBehaviour {
     [SerializeField] protected float lightDamage = 10f;
     [SerializeField] protected float heavyDamage = 16f;
 
+    //  Inspector — Dano de Queda
+    [Header("Dano de Queda")]
+    [SerializeField] protected float maxFallSpeedSafe = 18f; 
+    [SerializeField] protected float fallDamageMultiplier = 2.5f; 
+
     //  Inspector — Hurt
     [Header("Hurt")]
     [SerializeField] protected float hurtDuration = 0.6f;
@@ -99,6 +104,28 @@ public abstract class PlayerBase : MonoBehaviour {
     //  Inspector — Objetos de Combate
     [Header("Hitbox de Combate do Jogador")]
     public GameObject hitboxArmaObjeto;
+
+
+    protected virtual void OnCollisionEnter2D(Collision2D collision) {
+        if (currentState == State.Dead) return;
+
+        // Verifica se o objeto em que batemos faz parte da sua groundLayer
+        if (((1 << collision.gameObject.layer) & groundLayer) != 0) {
+        
+            // Pega a força do impacto vertical
+            float impactForce = Mathf.Abs(collision.relativeVelocity.y);
+
+            // Se a força for maior que o limite seguro, calcula e aplica o dano
+            if (impactForce > maxFallSpeedSafe) {
+                float extraForce = impactForce - maxFallSpeedSafe;
+                float damage = extraForce * fallDamageMultiplier;
+
+                Debug.Log($"[Dano de Queda] Força: {impactForce} | Dano recebido: {damage}");
+
+                TakeDamage(damage);
+            }
+        }
+    }
 
     protected bool TryAttackLight() {
         if (currentState == State.Dead || currentState == State.Blocking || currentState == State.Rolling) return false;
@@ -167,8 +194,8 @@ public abstract class PlayerBase : MonoBehaviour {
     //  Ref ao PlayerStats
     protected PlayerStats playerStats;
 
+
     //  PROPRIEDADES PÚBLICAS
-   
     public float MaxHealth => maxHealth;
     public float CurrentHealth => currentHealth;
     public float CurrentStamina => currentStamina;
@@ -179,6 +206,8 @@ public abstract class PlayerBase : MonoBehaviour {
     public bool IsHealing => currentState == State.Healing;
     public bool IsWarrior => this is SoulslikeKnight;
     public bool IsAttacking { get; protected set; }
+
+    public float heightMax = -10;
 
     // Eventos
     public event System.Action<float, float> OnHealthChanged;
@@ -235,6 +264,7 @@ public abstract class PlayerBase : MonoBehaviour {
 
     protected virtual void Update() {
         if (currentState == State.Dead) return;
+        VerificationHeight();
         CheckIfGrounded();
         ReadBaseInput();
         ReadCombatInput();
@@ -368,6 +398,16 @@ public abstract class PlayerBase : MonoBehaviour {
         ChangeState(State.Jumping);
         animator.Play(ANIM_JUMP);
         StartCoroutine(LandingWatcher());
+    }
+
+    public void VerificationHeight() {
+        if (currentState == State.Dead) return;
+
+        float height = transform.position.y;
+        if (height < heightMax) {
+            Debug.Log("Caiu no abismo!");
+            Die();
+        }
     }
 
     private IEnumerator LandingWatcher() {

@@ -26,7 +26,7 @@ public class Boss : MonoBehaviour {
     private Animator animator;
     private bool viradoParaDireita = true;
     private bool estaAtacando = false;
-    private bool estaMorto = false;
+    public bool estaMorto = false;
 
     [Header("Drop de Almas")]
     [SerializeField] private int soulDropAmount = 3200;

@@ -105,6 +105,8 @@ public abstract class PlayerBase : MonoBehaviour {
     [Header("Hitbox de Combate do Jogador")]
     public GameObject hitboxArmaObjeto;
 
+    [SerializeField] protected int maxJumps = 2; 
+    protected int jumpCount = 0;
 
     protected virtual void OnCollisionEnter2D(Collision2D collision) {
         if (currentState == State.Dead) return;
@@ -368,7 +370,7 @@ public abstract class PlayerBase : MonoBehaviour {
             bool sprinting = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && currentStamina > 0;
             float speed = sprinting ? runSpeed : walkSpeed;
 
-            if (IsAttacking) speed = walkSpeed * 0.3f; // Anda arrastado se bater andando
+            if (IsAttacking) speed = walkSpeed * 0.3f; 
 
             rb2D.linearVelocity = new Vector2(moveInput * speed, rb2D.linearVelocity.y);
 
@@ -381,13 +383,19 @@ public abstract class PlayerBase : MonoBehaviour {
     }
 
     protected void TryJump() {
-        if (!isGrounded) return;
+     
+        if (jumpCount >= maxJumps) return;
+
         if (IsAttacking) return;
-        if (currentState != State.Idle && currentState != State.Running) return;
+
+        if (currentState != State.Idle && currentState != State.Running && currentState != State.Jumping) return;
+
         if (currentStamina < staminaCostJump) return;
 
         StopAllCoroutines();
         ConsumeStamina(staminaCostJump);
+
+        jumpCount++;
 
         bool isSprinting = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && currentStamina > 0;
         float horizSpeed = 0f;
@@ -396,7 +404,9 @@ public abstract class PlayerBase : MonoBehaviour {
 
         rb2D.linearVelocity = new Vector2(horizSpeed, jumpForce);
         ChangeState(State.Jumping);
-        animator.Play(ANIM_JUMP);
+
+        animator.Play(ANIM_JUMP, -1, 0f);
+
         StartCoroutine(LandingWatcher());
     }
 
@@ -422,7 +432,12 @@ public abstract class PlayerBase : MonoBehaviour {
             Debug.LogError($"Falta arrastar o Ground Check Transform no script de {gameObject.name}!");
             return;
         }
+
         isGrounded = Physics2D.OverlapCircle(groundCheckTransform.position, groundCheckRadius, groundLayer);
+
+        if (isGrounded) {
+            jumpCount = 0;
+        }
     }
 
     protected void TryRoll() {

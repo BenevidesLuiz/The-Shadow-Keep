@@ -235337,7 +235337,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 1
+  m_SortingOrder: 2
   m_MaskInteraction: 0
   m_Sprite: {fileID: -3884400247260062513, guid: d2553a1c5d04e084b84c282fd1ddb082, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -235358,7 +235358,7 @@ Transform:
   m_GameObject: {fileID: 905209904}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 31.54, y: -7.57, z: 0}
+  m_LocalPosition: {x: 31.43, y: -7.54, z: 0}
   m_LocalScale: {x: 3.3693829, y: 2.7775457, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -235378,6 +235378,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PassagemCastelo
   nomeDaCenaDestino: FaseDentroDoCastelo
   tempoDeAnimacao: 0.1
+  usarTelaDeLoad: 1
   inimigo: {fileID: 1306134503}
 --- !u!61 &905209909
 BoxCollider2D:
@@ -404358,7 +404359,7 @@ AudioSource:
   m_PlayOnAwake: 1
   m_Volume: 1
   m_Pitch: 1
-  Loop: 1
+  Loop: 0
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -500366,7 +500367,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4568729934702582355, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
       propertyPath: vidaMax
-      value: 1
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 4568729934702582355, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
       propertyPath: textoVitoriaUI

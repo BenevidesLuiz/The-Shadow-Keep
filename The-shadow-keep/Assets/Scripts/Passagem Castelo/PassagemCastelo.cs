@@ -1,26 +1,37 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class PassagemCastelo : MonoBehaviour {
     [Header("Configurações")]
     public string nomeDaCenaDestino = "CenaInteriorCastelo";
     public float tempoDeAnimacao = 0.5f;
 
+    [Tooltip("Se marcado, vai passar pela tela de Loading. Se desmarcado, carrega a cena direto.")]
+    public bool usarTelaDeLoad = true;
+
     [Header("Requisito para Passar")]
-    [Tooltip("Arraste o inimigo aqui. A porta só abre se ele for destruído (ficar vazio).")]
     public GameObject inimigo;
 
     private Animator anim;
     private bool jaEntrou = false;
+
+    public static string cenaParaCarregar;
 
     private void Start() {
         anim = GetComponent<Animator>();
     }
 
     private void OnTriggerEnter2D(Collider2D collision) {
+
         if (inimigo != null) {
-            Debug.Log("A porta está trancada! Derrote o inimigo primeiro.");
-            return; 
+
+            Boss scriptBoss = inimigo.GetComponent<Boss>();
+
+            if (scriptBoss == null || !scriptBoss.estaMorto) {
+                Debug.Log("A porta está trancada! Derrote o inimigo primeiro.");
+                return;
+            }
         }
 
         if (collision.CompareTag("Player") && !jaEntrou) {
@@ -37,11 +48,18 @@ public class PassagemCastelo : MonoBehaviour {
     private IEnumerator EsperarEMudarCena() {
         yield return new WaitForSeconds(tempoDeAnimacao);
 
-        if (GameManager.Instance != null) {
-            GameManager.Instance.GoToScene(nomeDaCenaDestino);
+        if (usarTelaDeLoad) {
+            cenaParaCarregar = nomeDaCenaDestino;
+
+            SceneManager.LoadScene("Loading");
         }
         else {
-            Debug.LogError("GameManager não encontrado! Arraste o Prefab do GameManager para esta cena.");
+            if (GameManager.Instance != null) {
+                GameManager.Instance.GoToSceneInstant(nomeDaCenaDestino);
+            }
+            else {
+                SceneManager.LoadScene(nomeDaCenaDestino);
+            }
         }
     }
 }

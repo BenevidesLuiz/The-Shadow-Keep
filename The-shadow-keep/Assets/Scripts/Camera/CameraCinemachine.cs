@@ -1,27 +1,24 @@
 using UnityEngine;
-using Unity.Cinemachine;
+using Unity.Cinemachine; // ATENÇÃO: Obrigatório para o Unity 6!
 
 public class CameraFollowSetup : MonoBehaviour
 {
-    // Mudamos para LateUpdate para rodar continuamente após os spawners agirem
+    private CinemachineCamera vcam;
+
+    void Awake()
+    {
+        vcam = GetComponent<CinemachineCamera>();
+    }
+
     void LateUpdate()
     {
-        // 1. Tenta encontrar o jogador na cena
+        if (vcam != null && vcam.Follow != null) return;
         GameObject player = GameObject.FindWithTag("Player"); 
 
-        if (player != null)
+        if (player != null && vcam != null)
         {
-            // 2. Encontra a Cinemachine Camera
-            CinemachineCamera vcam = FindFirstObjectByType<CinemachineCamera>();
-
-            if (vcam != null)
-            {
-                // 3. Cola o jogador na câmera
-                vcam.Follow = player.transform;
-                
-                // 4. DESATIVA este script! Já achamos o Player, não precisamos mais procurar.
-                this.enabled = false; 
-            }
+            vcam.Follow = player.transform;
+            Debug.Log("Câmera encontrou o Player e começou a seguir!");
         }
     }
 }

@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Enemy
   - CHAOTILE
+  - Ground
   layers:
   - Default
   - TransparentFX

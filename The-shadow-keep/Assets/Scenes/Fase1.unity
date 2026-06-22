@@ -235377,7 +235377,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PassagemCastelo
   nomeDaCenaDestino: FaseDentroDoCastelo
-  tempoDeEspera: 15
+  tempoDeEspera: 31
   usarTelaDeLoad: 0
   scriptBoss: {fileID: 1170456916}
 --- !u!61 &905209909
@@ -500373,19 +500373,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4568729934702582355, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
       propertyPath: vidaMax
-      value: 15
+      value: 420
       objectReference: {fileID: 0}
     - target: {fileID: 4568729934702582355, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
       propertyPath: textoVitoriaUI
       value: 
       objectReference: {fileID: 1825798735}
     - target: {fileID: 6461334441220257783, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6461334441220257783, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6461334441220257783, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 27.45
+      value: 37.33
       objectReference: {fileID: 0}
     - target: {fileID: 6461334441220257783, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -6.79
+      value: -4.97
       objectReference: {fileID: 0}
     - target: {fileID: 6461334441220257783, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
       propertyPath: m_LocalPosition.z

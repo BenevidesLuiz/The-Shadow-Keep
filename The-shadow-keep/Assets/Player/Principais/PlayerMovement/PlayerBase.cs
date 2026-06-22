@@ -568,11 +568,23 @@ public abstract class PlayerBase : MonoBehaviour {
 
     private IEnumerator DeathAndRespawn() {
         yield return new WaitForSeconds(2f);
-        GameManager.Instance.currentScene = SceneManager.GetActiveScene().name;
-        SavePlayer();
-        GameManager.Instance.GoToSceneInstant("Morte");
-    }
 
+        SavePlayer();
+
+        string cenaAtual = SceneManager.GetActiveScene().name;
+
+        PlayerPrefs.SetString("LastScene", cenaAtual);
+        PlayerPrefs.Save();
+
+        if (GameManager.Instance != null) {
+            GameManager.Instance.currentScene = cenaAtual;
+            GameManager.Instance.GoToSceneInstant("Morte");
+        }
+        else {
+            Debug.LogWarning("[PlayerBase] Modo de teste: GameManager ausente. Carregando a cena 'Morte' direto!");
+            SceneManager.LoadScene("Morte");
+        }
+    }
     public void RestoreHealth(float amount) {
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
         OnHealthChanged?.Invoke(currentHealth, maxHealth);

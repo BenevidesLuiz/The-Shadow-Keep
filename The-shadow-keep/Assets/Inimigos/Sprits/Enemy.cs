@@ -268,11 +268,19 @@ public class Enemy : MonoBehaviour {
 
     private void UpdateFacing() {
         if (state == State.Dead) return;
+
         float dir = 0f;
         if (state == State.Chasing && player != null) dir = player.position.x - transform.position.x;
         else if (state == State.Wandering) dir = wanderDir;
         else if (rb.linearVelocity.x != 0f) dir = rb.linearVelocity.x;
-        if (Mathf.Abs(dir) > 0.01f) transform.localScale = new Vector3(dir > 0 ? 1f : -1f, 1f, 1f);
+
+        if (Mathf.Abs(dir) > 0.01f) {
+            float tamanhoOriginalY = transform.localScale.y;
+
+            float tamanhoOriginalX = Mathf.Abs(transform.localScale.x);
+
+            transform.localScale = new Vector3(dir > 0 ? tamanhoOriginalX : -tamanhoOriginalX, tamanhoOriginalY, 1f);
+        }
     }
 
     private void PlayAnim(string name) {

@@ -182,7 +182,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 1
+  m_SortingOrder: 5
   m_MaskInteraction: 0
   m_Sprite: {fileID: -548093525, guid: 8a5a2768f74b5cc44bc22c536a939d33, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -305,8 +305,12 @@ MonoBehaviour:
   staminaCostHeavy: 19
   lightDamage: 10
   heavyDamage: 16
+  maxFallSpeedSafe: 18
+  fallDamageMultiplier: 2.5
   hurtDuration: 0.6
   hitboxArmaObjeto: {fileID: 4603617684903556009}
+  maxJumps: 2
+  heightMax: -10
   hitboxArm: {fileID: 4603617684903556009}
 --- !u!95 &1092049409427168166
 Animator:

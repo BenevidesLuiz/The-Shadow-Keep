@@ -135187,7 +135187,7 @@ Transform:
   m_GameObject: {fileID: 571166780}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 18.019575, y: 0.04, z: -10}
+  m_LocalPosition: {x: -7.5527377, y: -0.38909996, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -144165,7 +144165,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4a8050572d1e9f4d9aaa4ab963da544, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
-  maxHealth: 110
+  musicaLuta: {fileID: 8300000, guid: 99c84b417b7ccd84b8d3789a3bfd03d6, type: 3}
+  musicaVitoria: {fileID: 8300000, guid: ba07c3881253db446a888b45009c32ac, type: 3}
+  maxHealth: 17
   hurtStunTime: 0.35
   soulDropAmount: 500
   soulDropVariance: 20
@@ -144329,7 +144331,7 @@ Transform:
   m_GameObject: {fileID: 644966544}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.41, y: -1.11, z: 0}
+  m_LocalPosition: {x: 50.49, y: -6.02, z: 0}
   m_LocalScale: {x: 2.075216, y: 2.3012087, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

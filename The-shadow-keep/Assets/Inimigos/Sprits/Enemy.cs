@@ -17,6 +17,16 @@ public class Enemy : MonoBehaviour {
     private const string A_HURT = "Hurt";
     private const string A_DEATH = "Death";
 
+    // --- CORREÇÃO DA ANIMAÇÃO AQUI ---
+    private string currentAnimName = "";
+
+    [Header("Áudio (Música)")]
+    [SerializeField] private AudioClip musicaLuta;
+    [SerializeField] private AudioClip musicaVitoria;
+    private AudioSource audioSource;
+    private bool tocandoLuta = false;
+    private bool tocouVitoria = false;
+
     [Header("Vida")]
     [SerializeField] protected float maxHealth = 50f;
     [SerializeField] protected float hurtStunTime = 0.35f;
@@ -67,7 +77,11 @@ public class Enemy : MonoBehaviour {
         anim = GetComponent<Animator>();
         hp = maxHealth;
 
-        // Tenta buscar no Start, mas se não achar, não dá mais erro vermelho!
+        // Configuração do Áudio de Luta
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.spatialBlend = 0f; // Som 2D (toca igual nas duas caixas de som)
+        audioSource.loop = true; // A música de luta repete até acabar o combate
+
         BuscarPlayer();
 
         wanderDir = Random.value > 0.5f ? 1f : -1f;
@@ -100,9 +114,7 @@ public class Enemy : MonoBehaviour {
     private void Update() {
         if (state == State.Dead) return;
 
-        if (player == null) {
-            BuscarPlayer();
-        }
+        if (player == null) BuscarPlayer();
 
         if (pendingKnockback != Vector2.zero) {
             rb.linearVelocity = pendingKnockback;
@@ -125,7 +137,12 @@ public class Enemy : MonoBehaviour {
     }
 
     private void UpdateWander() {
-        if (player != null && Dist() <= aggroRange) { state = State.Chasing; return; }
+        // Se o player chegar perto, inicia a perseguição e a música!
+        if (player != null && Dist() <= aggroRange) {
+            state = State.Chasing;
+            TocarMusicaLuta();
+            return;
+        }
 
         if (isWanderPaused) {
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
@@ -159,12 +176,17 @@ public class Enemy : MonoBehaviour {
         isWanderPaused = false;
     }
 
-    
     private void UpdateChasing() {
-        if (player == null) { state = State.Wandering; return; }
+        if (player == null) { state = State.Wandering; PararMusicaLuta(); return; }
+
         float dist = Dist();
 
-        if (dist > deaggroRange) { state = State.Wandering; return; }
+        // Se o player fugir para longe, desiste e para a música
+        if (dist > deaggroRange) {
+            state = State.Wandering;
+            PararMusicaLuta();
+            return;
+        }
 
         if (dist <= stopDistance) {
             rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
@@ -177,7 +199,6 @@ public class Enemy : MonoBehaviour {
         PlayAnim(A_WALK);
     }
 
-    
     private IEnumerator AttackSequence() {
         state = State.Windup;
         rb.linearVelocity = Vector2.zero;
@@ -207,13 +228,21 @@ public class Enemy : MonoBehaviour {
         }
 
         rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
-        if (state == State.Recovery)
-            state = (player != null && Dist() <= deaggroRange) ? State.Chasing : State.Wandering;
+        if (state == State.Recovery) {
+            if (player != null && Dist() <= deaggroRange) {
+                state = State.Chasing;
+            }
+            else {
+                state = State.Wandering;
+                PararMusicaLuta();
+            }
+        }
     }
 
-    
     public virtual void TakeDamage(float amount, Vector2 knockback = default) {
         if (state == State.Dead) return;
+
+        TocarMusicaLuta();
 
         hp = Mathf.Max(0f, hp - amount);
         OnHealthChanged?.Invoke(hp, maxHealth);
@@ -242,6 +271,9 @@ public class Enemy : MonoBehaviour {
         rb.linearVelocity = Vector2.zero;
         PlayAnim(A_DEATH);
 
+        PararMusicaLuta();
+        TocarMusicaVitoria();
+
         foreach (Collider2D col in GetComponents<Collider2D>())
             col.enabled = false;
 
@@ -252,6 +284,38 @@ public class Enemy : MonoBehaviour {
         Destroy(gameObject);
     }
 
+    private void TocarMusicaLuta() {
+        if (!tocandoLuta && musicaLuta != null) {
+            tocandoLuta = true;
+            audioSource.clip = musicaLuta;
+            audioSource.Play();
+        }
+    }
+
+    private void PararMusicaLuta() {
+        if (tocandoLuta && audioSource != null) {
+            tocandoLuta = false;
+            audioSource.Stop();
+        }
+    }
+
+    private void TocarMusicaVitoria() {
+        if (!tocouVitoria && musicaVitoria != null) {
+            tocouVitoria = true;
+
+            GameObject tocaFitasFantasma = new GameObject("MusicaVitoria_" + gameObject.name);
+            AudioSource sourceTemporario = tocaFitasFantasma.AddComponent<AudioSource>();
+
+            sourceTemporario.clip = musicaVitoria;
+            sourceTemporario.spatialBlend = 0f; // Som 2D
+            sourceTemporario.volume = 0.8f;
+            sourceTemporario.Play();
+
+            Destroy(tocaFitasFantasma, musicaVitoria.length);
+        }
+    }
+
+    
     private void DropSouls() {
         if (SoulManager.Instance == null) return;
 
@@ -262,7 +326,6 @@ public class Enemy : MonoBehaviour {
         Debug.Log($"[Enemy] Morreu → +{finalDrop} almas dropadas.");
     }
 
-    
     private float Dist() =>
         player != null ? Vector2.Distance(transform.position, player.position) : float.MaxValue;
 
@@ -276,16 +339,17 @@ public class Enemy : MonoBehaviour {
 
         if (Mathf.Abs(dir) > 0.01f) {
             float tamanhoOriginalY = transform.localScale.y;
-
             float tamanhoOriginalX = Mathf.Abs(transform.localScale.x);
-
             transform.localScale = new Vector3(dir > 0 ? tamanhoOriginalX : -tamanhoOriginalX, tamanhoOriginalY, 1f);
         }
     }
 
     private void PlayAnim(string name) {
-        if (anim != null && anim.runtimeAnimatorController != null)
+        if (anim != null && anim.runtimeAnimatorController != null) {
+            if (currentAnimName == name) return;
             anim.Play(name);
+            currentAnimName = name; 
+        }
     }
 
     private void OnDrawGizmosSelected() {

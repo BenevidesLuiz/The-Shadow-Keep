@@ -17,7 +17,7 @@ public class Enemy : MonoBehaviour {
     private const string A_HURT = "Hurt";
     private const string A_DEATH = "Death";
 
-    // --- CORREÇÃO DA ANIMAÇÃO AQUI ---
+
     private string currentAnimName = "";
 
     [Header("Áudio (Música)")]
@@ -26,6 +26,9 @@ public class Enemy : MonoBehaviour {
     private AudioSource audioSource;
     private bool tocandoLuta = false;
     private bool tocouVitoria = false;
+
+    [Tooltip("Tempo em segundos que a música de vitória vai tocar")]
+    [SerializeField] private float tempoMusicaVitoria = 15f;
 
     [Header("Vida")]
     [SerializeField] protected float maxHealth = 50f;
@@ -307,15 +310,15 @@ public class Enemy : MonoBehaviour {
             AudioSource sourceTemporario = tocaFitasFantasma.AddComponent<AudioSource>();
 
             sourceTemporario.clip = musicaVitoria;
-            sourceTemporario.spatialBlend = 0f; // Som 2D
+            sourceTemporario.spatialBlend = 0f;
             sourceTemporario.volume = 0.8f;
             sourceTemporario.Play();
 
-            Destroy(tocaFitasFantasma, musicaVitoria.length);
+            Destroy(tocaFitasFantasma, tempoMusicaVitoria);
         }
     }
 
-    
+
     private void DropSouls() {
         if (SoulManager.Instance == null) return;
 

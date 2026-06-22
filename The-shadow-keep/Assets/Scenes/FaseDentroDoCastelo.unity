@@ -89873,6 +89873,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmadilhaEspada
   tempoMaximoQueda: 10
   quantidadeDano: 6
+  oQueEChao:
+    serializedVersion: 2
+    m_Bits: 512
 --- !u!60 &396576078
 PolygonCollider2D:
   m_ObjectHideFlags: 0
@@ -89959,7 +89962,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!212 &396576080
 SpriteRenderer:
@@ -106295,6 +106298,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmadilhaEspada
   tempoMaximoQueda: 10
   quantidadeDano: 6
+  oQueEChao:
+    serializedVersion: 2
+    m_Bits: 512
 --- !u!60 &462152154
 PolygonCollider2D:
   m_ObjectHideFlags: 0
@@ -106381,7 +106387,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!212 &462152156
 SpriteRenderer:
@@ -137230,7 +137236,7 @@ Transform:
   m_GameObject: {fileID: 571166780}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 18.019575, y: 0.04, z: -10}
+  m_LocalPosition: {x: -8.173264, y: -0.39330995, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -146210,9 +146216,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
   musicaLuta: {fileID: 8300000, guid: 99c84b417b7ccd84b8d3789a3bfd03d6, type: 3}
   musicaVitoria: {fileID: 8300000, guid: ba07c3881253db446a888b45009c32ac, type: 3}
-  maxHealth: 17
+  tempoMusicaVitoria: 15
+  maxHealth: 420
   hurtStunTime: 0.35
-  soulDropAmount: 500
+  soulDropAmount: 17000
   soulDropVariance: 20
   wanderSpeed: 1.8
   chaseSpeed: 3.5
@@ -146374,8 +146381,8 @@ Transform:
   m_GameObject: {fileID: 644966544}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 50.49, y: -6.02, z: 0}
-  m_LocalScale: {x: 2.075216, y: 2.3012087, z: 1}
+  m_LocalPosition: {x: 58.22, y: -6.93, z: 0}
+  m_LocalScale: {x: 2.075216, y: 1.431582, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -146390,7 +146397,7 @@ Animator:
   m_GameObject: {fileID: 644966544}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: b52a036a218da174bb71f828d8ab47df, type: 2}
+  m_Controller: {fileID: 9100000, guid: 6db71a80ec2350e499d4f5b7b7c373f6, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -151377,8 +151384,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 634.19574, y: 271.6}
-  m_SizeDelta: {x: 1267.1917, y: 544}
+  m_AnchoredPosition: {x: 694.7489, y: 317.73572}
+  m_SizeDelta: {x: 1388.2981, y: 636.2715}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &697045233
 GameObject:
@@ -175996,7 +176003,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -544, y: 203.79999}
+  m_AnchoredPosition: {x: -454, y: 261}
   m_SizeDelta: {x: 197.0589, y: 26.195}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &749516414
@@ -231292,7 +231299,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!212 &863896171
 SpriteRenderer:
@@ -231382,6 +231389,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmadilhaEspada
   tempoMaximoQueda: 10
   quantidadeDano: 6
+  oQueEChao:
+    serializedVersion: 2
+    m_Bits: 512
 --- !u!1 &874347957
 GameObject:
   m_ObjectHideFlags: 0
@@ -236667,7 +236677,7 @@ Transform:
   m_GameObject: {fileID: 927391416}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.024, y: 0.006, z: 0}
   m_LocalScale: {x: 1.1, y: 1.6, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -256669,6 +256679,7 @@ MonoBehaviour:
   barrilInteiro: {fileID: -8568042794190644651, guid: 26e9c1ab7111b404cbfd8b9f97d0908b, type: 3}
   barrilQuebrado: {fileID: -8629665495130765605, guid: 1ebc8a1549061ec468f9a77b680aec5c, type: 3}
   painelFotoUI: {fileID: 1151837601}
+  musicaLuta: {fileID: 8300000, guid: 27211ae49c0bcc942910357ca9d72ebc, type: 3}
 --- !u!212 &983256770
 SpriteRenderer:
   serializedVersion: 2
@@ -261841,7 +261852,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -622.9, y: 156.9}
+  m_AnchoredPosition: {x: -536.9, y: 201.9}
   m_SizeDelta: {x: 19.2704, y: 16.5959}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1011109612
@@ -302359,7 +302370,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1151837602
 RectTransform:
   m_ObjectHideFlags: 0
@@ -337031,6 +337042,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmadilhaEspada
   tempoMaximoQueda: 10
   quantidadeDano: 6
+  oQueEChao:
+    serializedVersion: 2
+    m_Bits: 512
 --- !u!60 &1271684356
 PolygonCollider2D:
   m_ObjectHideFlags: 0
@@ -337117,7 +337131,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!212 &1271684358
 SpriteRenderer:
@@ -356885,6 +356899,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmadilhaEspada
   tempoMaximoQueda: 10
   quantidadeDano: 6
+  oQueEChao:
+    serializedVersion: 2
+    m_Bits: 512
 --- !u!60 &1343363747
 PolygonCollider2D:
   m_ObjectHideFlags: 0
@@ -356971,7 +356988,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!212 &1343363749
 SpriteRenderer:
@@ -382260,6 +382277,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmadilhaEspada
   tempoMaximoQueda: 10
   quantidadeDano: 6
+  oQueEChao:
+    serializedVersion: 2
+    m_Bits: 512
 --- !u!60 &1462012424
 PolygonCollider2D:
   m_ObjectHideFlags: 0
@@ -382346,7 +382366,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!212 &1462012426
 SpriteRenderer:
@@ -397053,8 +397073,8 @@ Transform:
   m_GameObject: {fileID: 1504095129}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 18.7551, y: -0.4294, z: 0}
+  m_LocalScale: {x: 1.605, y: 1.0095, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 564250318}
@@ -505464,6 +505484,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArmadilhaEspada
   tempoMaximoQueda: 10
   quantidadeDano: 6
+  oQueEChao:
+    serializedVersion: 2
+    m_Bits: 512
 --- !u!60 &1709648532
 PolygonCollider2D:
   m_ObjectHideFlags: 0
@@ -505550,7 +505573,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 0
 --- !u!212 &1709648534
 SpriteRenderer:
@@ -581829,7 +581852,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -511, y: 145.1}
+  m_AnchoredPosition: {x: -425, y: 190.10004}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1997919630
@@ -587485,8 +587508,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -566.60004, y: 177.71997}
-  m_SizeDelta: {x: 136.4419, y: 21.0598}
+  m_AnchoredPosition: {x: -466.6001, y: 228.1}
+  m_SizeDelta: {x: 160.4417, y: 25.0597}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2066620147
 MonoBehaviour:

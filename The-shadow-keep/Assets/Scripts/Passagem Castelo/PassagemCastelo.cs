@@ -2,54 +2,40 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.SceneManagement;
 
-public class PassagemCastelo : MonoBehaviour {
-    [Header("Configurações")]
+public class TransicaoAposChefe : MonoBehaviour {
+    [Header("Configurações de Transição")]
     public string nomeDaCenaDestino = "CenaInteriorCastelo";
-    public float tempoDeAnimacao = 0.5f;
+    public float tempoDeEspera = 15f; 
 
     [Tooltip("Se marcado, vai passar pela tela de Loading. Se desmarcado, carrega a cena direto.")]
     public bool usarTelaDeLoad = true;
-
-    [Header("Requisito para Passar")]
-    public GameObject inimigo;
-
-    private Animator anim;
-    private bool jaEntrou = false;
-
     public static string cenaParaCarregar;
 
-    private void Start() {
-        anim = GetComponent<Animator>();
-    }
+    [Header("Referência do Inimigo")]
+    [Tooltip("Arraste o GameObject do Boss aqui pelo Inspector")]
+    public Boss scriptBoss;
 
-    private void OnTriggerEnter2D(Collider2D collision) {
+    private bool jaIniciouTransicao = false;
 
-        if (inimigo != null) {
-
-            Boss scriptBoss = inimigo.GetComponent<Boss>();
-
-            if (scriptBoss == null || !scriptBoss.estaMorto) {
-                Debug.Log("A porta está trancada! Derrote o inimigo primeiro.");
-                return;
-            }
-        }
-
-        if (collision.CompareTag("Player") && !jaEntrou) {
-            jaEntrou = true;
-
-            if (anim != null) {
-                anim.SetTrigger("Abrir");
-            }
-
+    private void Update() {
+        if (!jaIniciouTransicao && scriptBoss != null && scriptBoss.estaMorto) {
+            jaIniciouTransicao = true; 
             StartCoroutine(EsperarEMudarCena());
         }
     }
 
     private IEnumerator EsperarEMudarCena() {
-        yield return new WaitForSeconds(tempoDeAnimacao);
+        Debug.Log("Chefe derrotado! Aguardando " + tempoDeEspera + " segundos...");
+
+        yield return new WaitForSeconds(tempoDeEspera);
 
         if (usarTelaDeLoad) {
-            cenaParaCarregar = nomeDaCenaDestino;
+            if (GameManager.Instance != null) {
+                GameManager.Instance.targetScene = nomeDaCenaDestino;
+            }
+            else {
+                Debug.LogError("GameManager não encontrado na cena!");
+            }
 
             SceneManager.LoadScene("Loading");
         }

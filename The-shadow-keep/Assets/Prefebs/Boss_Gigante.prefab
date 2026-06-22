@@ -129,6 +129,10 @@ PrefabInstance:
       value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
+      propertyPath: tempoTocando
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
       propertyPath: musicaVitoria
       value: 
       objectReference: {fileID: 8300000, guid: ba07c3881253db446a888b45009c32ac, type: 3}

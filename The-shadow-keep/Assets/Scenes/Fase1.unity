@@ -235377,9 +235377,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PassagemCastelo
   nomeDaCenaDestino: FaseDentroDoCastelo
-  tempoDeAnimacao: 0.1
-  usarTelaDeLoad: 1
-  inimigo: {fileID: 1306134503}
+  tempoDeEspera: 15
+  usarTelaDeLoad: 0
+  scriptBoss: {fileID: 1170456916}
 --- !u!61 &905209909
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -314839,6 +314839,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1165407962}
   m_CullTransparentMesh: 1
+--- !u!114 &1170456916 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4568729934702582355, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
+  m_PrefabInstance: {fileID: 1613677316188633736}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f01b5b9064f23dc4dbe75ab4a40d54e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Boss
 --- !u!1 &1181999525
 GameObject:
   m_ObjectHideFlags: 0
@@ -354546,11 +354557,6 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
---- !u!1 &1306134503 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 371022890504123815, guid: 8beda630a982c2a438587b613ab66cbd, type: 3}
-  m_PrefabInstance: {fileID: 1613677316188633736}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1312280263
 GameObject:
   m_ObjectHideFlags: 0

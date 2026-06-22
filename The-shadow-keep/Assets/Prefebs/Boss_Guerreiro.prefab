@@ -166,6 +166,7 @@ MonoBehaviour:
   distanciaVisao: 3
   distanciaAtaque: 3
   tempoEntreAtaques: 2
+  estaMorto: 0
   soulDropAmount: 3200
   soulDropVariance: 20
 --- !u!61 &3530305726830487329

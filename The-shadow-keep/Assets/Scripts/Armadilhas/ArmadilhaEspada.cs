@@ -66,7 +66,7 @@ public class ArmadilhaEspada : MonoBehaviour
             PlayerBase scriptPlayer = collision.GetComponent<PlayerBase>(); 
             if (scriptPlayer != null)
             {
-                // script para dar dano
+                scriptPlayer.TakeDamage(quantidadeDano);
             }
 
             SumirEspinho();

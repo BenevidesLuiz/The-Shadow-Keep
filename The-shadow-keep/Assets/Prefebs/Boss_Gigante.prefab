@@ -122,11 +122,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
       propertyPath: vidaMax
-      value: 50
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
       propertyPath: velocidade
-      value: 10
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3414180768330671741, guid: 792ccc5c71a2e2d449d44cb144ce7492, type: 3}
       propertyPath: tempoTocando

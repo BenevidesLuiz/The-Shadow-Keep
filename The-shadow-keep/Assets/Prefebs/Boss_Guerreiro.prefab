@@ -161,7 +161,7 @@ MonoBehaviour:
   musicaVitoria: {fileID: 0}
   textoVitoriaUI: {fileID: 0}
   tempoTocando: 0
-  vidaMax: 15
+  vidaMax: 10
   velocidade: 3
   distanciaVisao: 3
   distanciaAtaque: 3
